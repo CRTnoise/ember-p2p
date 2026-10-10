@@ -1,0 +1,5 @@
+# LF everywhere, including Windows checkouts: patch-package patches and the
+# shared-protocol sync check compare files byte for byte.
+* text=auto eol=lf
+*.png binary
+*.ico binary

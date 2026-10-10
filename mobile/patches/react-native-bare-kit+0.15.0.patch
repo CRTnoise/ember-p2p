@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-bare-kit/android/src/main/java/to/holepunch/bare/kit/react/BareKitPackage.java b/node_modules/react-native-bare-kit/android/src/main/java/to/holepunch/bare/kit/react/BareKitPackage.java
+index 743c64e..e3c6929 100644
+--- a/node_modules/react-native-bare-kit/android/src/main/java/to/holepunch/bare/kit/react/BareKitPackage.java
++++ b/node_modules/react-native-bare-kit/android/src/main/java/to/holepunch/bare/kit/react/BareKitPackage.java
+@@ -8,7 +8,7 @@ import com.facebook.react.module.model.ReactModuleInfoProvider;
+ import java.util.HashMap;
+ import java.util.Map;
+ 
+-public class BareKitPackage extends BaseReactPackage {
++public class BareKitPackage extends BaseReactPackage implements com.facebook.react.ReactPackage {
+   public static String NAME = "BareKit";
+ 
+   @Override

@@ -1,0 +1,87 @@
+# Push a tag like v2.6.0 → builds Windows + Linux, attaches them to a GitHub
+# Release with SHA-256 checksums. "Run workflow" by hand builds without
+# releasing (download the files from the run's Artifacts).
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: build
+            files: desktop/dist/*.exe
+          - os: ubuntu-latest
+            script: build-linux
+            files: desktop/dist/*.AppImage
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Tag must match package.json version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != package.json v$v"; exit 1; }
+
+      - run: npm ci
+      - run: npm test
+      - run: node ../tools/sync-shared.js --check
+
+      - run: npm run ${{ matrix.script }}
+
+      - name: Checksums
+        shell: bash
+        run: node -e "const fs=require('fs'),c=require('crypto');const fsx=fs.readdirSync('dist').filter(f=>/\.(exe|AppImage)$/.test(f));fs.writeFileSync('dist/SHA256SUMS-${{ runner.os }}.txt',fsx.map(f=>c.createHash('sha256').update(fs.readFileSync('dist/'+f)).digest('hex')+'  '+f).join('\n')+'\n')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ember-${{ runner.os }}
+          path: |
+            ${{ matrix.files }}
+            desktop/dist/SHA256SUMS-*.txt
+          if-no-files-found: error
+
+  # one job publishes, after both builds succeed (two jobs creating the same
+  # release at once can race and fail)
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -la dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          body: |
+            **Windows:** `Ember-Setup-*.exe` installs Ember; `Ember-*-portable.exe` runs without installing.
+            **Linux:** `Ember-*.AppImage` (`chmod +x`, then run).
+
+            Builds are not code-signed yet: Windows SmartScreen will say "Windows protected your PC". Click **More info → Run anyway**. Verify downloads against the `SHA256SUMS` files.
+
+            Protocol v2: update every Ember install (desktop and mobile) to this version.
+
+            Desktop builds bundle FFmpeg (GPL-3.0-or-later) from `ffmpeg-static`; its license ships next to the binary. Source: https://ffmpeg.org/download.html · see NOTICE.md.

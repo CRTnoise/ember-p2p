@@ -1,0 +1,18 @@
+{
+  "note": "Dependencies to ADD to the package.json created by `react-native init` (do not replace that file). The README's npm install lines install exactly these.",
+  "dependencies": {
+    "react-native-bare-kit": "0.15.0",
+    "buffer": "^6.0.3",
+    "b4a": "^1.6.0",
+    "corestore": "^7.0.0",
+    "hyperswarm": "^4.0.0",
+    "hypercore": "^11.0.0",
+    "sodium-universal": "^5.0.0",
+    "bare-fs": "*",
+    "bare-path": "*",
+    "bare-crypto": "*",
+    "react-native-image-picker": "^7.0.0"
+  },
+  "optionalDependencies": { "@react-native-clipboard/clipboard": "^1.14.0" },
+  "devDependencies": { "bare-pack": "^2.2.0", "patch-package": "^8.0.0" }
+}

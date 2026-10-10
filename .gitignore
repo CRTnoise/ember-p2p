@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+Thumbs.db
+
+# generated: rebuilt by `npm run bundle:engine` in the mobile project
+mobile/src/engine.bundle.mjs
+
+# never commit identities
+ember-identity*.txt
+RESTORE_KEY

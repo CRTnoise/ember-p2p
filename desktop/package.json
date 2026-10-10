@@ -1,0 +1,84 @@
+{
+  "name": "ember-desktop",
+  "version": "2.6.0",
+  "private": true,
+  "description": "Serverless peer-to-peer social network — no servers, no accounts, discovery by meaning (desktop client)",
+  "author": "CRTnoise",
+  "license": "MIT",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/protocol.test.js",
+    "build": "electron-builder --win --publish never",
+    "build-linux": "electron-builder --linux --publish never"
+  },
+  "dependencies": {
+    "b4a": "^1.9.0",
+    "corestore": "^7.12.0",
+    "ffmpeg-static": "^5.3.0",
+    "hypercore": "^11.35.1",
+    "hyperswarm": "^4.17.0",
+    "sodium-universal": "^5.0.1"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "productName": "Ember",
+  "build": {
+    "appId": "app.ember.desktop",
+    "productName": "Ember",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "build/icon.png"
+    ],
+    "extraFiles": [
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE.txt"
+      },
+      {
+        "from": "../NOTICE.md",
+        "to": "NOTICE.md"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ember",
+      "license": "../LICENSE",
+      "artifactName": "Ember-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Ember-${version}-portable.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "build/icon.png",
+      "category": "Network",
+      "artifactName": "Ember-${version}.${ext}",
+      "syncDesktopName": true
+    },
+    "publish": null
+  },
+  "desktopName": "ember.desktop"
+}
