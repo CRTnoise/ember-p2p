@@ -93,5 +93,8 @@ mirrored to mobile with `node tools/sync-shared.js` (CI can run it with
 `--check`). Run `npm test` in `desktop/` before opening a PR.
 
 ## License
-MIT, see [LICENSE](LICENSE). Desktop builds bundle FFmpeg (GPL-3.0): see
-[NOTICE.md](NOTICE.md) before distributing binaries.
+Copyright (C) 2026 CRTnoise. Ember is free software under the
+[GNU GPL v3](LICENSE) or any later version: you can use, study, modify and
+share it, and anything you distribute that's built from it must stay open
+under the same terms. Desktop builds bundle FFmpeg (also GPL); see
+[NOTICE.md](NOTICE.md).
