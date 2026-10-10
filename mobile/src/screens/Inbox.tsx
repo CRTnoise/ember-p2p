@@ -4,6 +4,7 @@ import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, Image, K
 import { api, engine } from '../rpc'
 import { useEmber } from '../../App'
 import { Avatar, Chip } from '../components/Card'
+import ImageViewer from '../components/ImageViewer'
 import { MONO, SANS } from '../theme'
 
 const ago = (ts: number) => {
@@ -19,6 +20,7 @@ export default function Inbox () {
   const [convos, setConvos] = useState<any[]>([])
   const [msgs, setMsgs] = useState<any[]>([])
   const [text, setText] = useState('')
+  const [view, setView] = useState<string | null>(null)
   const listRef = useRef<any>(null)
 
   const load = async () => setConvos(await api.dmList())
@@ -67,7 +69,7 @@ export default function Inbox () {
             return (
               <View style={[s.bubble, { borderColor: t.line, backgroundColor: mine ? t.ink : t.paper, alignSelf: mine ? 'flex-end' : 'flex-start' }]}>
                 {item.kind === 'i'
-                  ? <Image source={{ uri: item.text }} style={{ width: 200, height: 200 }} resizeMode="cover" />
+                  ? <TouchableOpacity onPress={() => setView(item.text)}><Image source={{ uri: item.text }} style={{ width: 200, height: 200 }} resizeMode="cover" /></TouchableOpacity>
                   : item.kind === 'v'
                     ? <Text style={{ fontFamily: MONO, fontSize: 12, color: mine ? t.inv : t.ink }}>♪ voice message (desktop only for now)</Text>
                     : <Text style={{ fontFamily: SANS, fontSize: 14, color: mine ? t.inv : t.ink }}>{item.text}</Text>}
@@ -80,10 +82,11 @@ export default function Inbox () {
           contentContainerStyle={{ padding: 14, gap: 8 }}
         />
         <View style={[s.composer, { borderColor: t.line, backgroundColor: t.paper }]}>
-          <TextInput value={text} onChangeText={setText} placeholder="encrypted message…" placeholderTextColor={t.soft}
+          <TextInput value={text} onChangeText={setText} placeholder="encrypted message…" placeholderTextColor={t.soft} autoFocus
             style={[s.input, { borderColor: t.line, color: t.ink }]} onSubmitEditing={send} />
           <Chip t={t} solid label="SEND" onPress={send} />
         </View>
+        <ImageViewer visible={!!view} onClose={() => setView(null)} src={view} title={peer.name || 'image'} />
       </KeyboardAvoidingView>
     )
   }

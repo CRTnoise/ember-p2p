@@ -1,5 +1,27 @@
 # Changelog
 
+## v2.6.1 — interaction fixes
+- **Message requests: ACCEPT / IGNORE / ACCEPT + FOLLOW work again** (inbox
+  rail and full DM view). The list was built by attaching click handlers to
+  request rows and then appending the "CONVERSATIONS" header with
+  `innerHTML +=`, which re-parses the whole list and silently drops every
+  handler already attached. All 8 `innerHTML +=` sites now use
+  `insertAdjacentHTML`, which leaves existing elements alone.
+- **Image viewer.** Clicking a post image used to load the full image into the
+  card, which crops it, so you never saw it whole. Images (posts and DMs) now
+  open in a centered viewer: preview first, full image when a holder answers,
+  click to zoom, Esc or click outside to close. Full images are cached.
+- **Focus.** A reply notification takes you to that exact post, highlighted,
+  with its thread open. Opening a conversation puts the cursor in the message
+  box.
+- Starting a DM accepts a key pasted with extra text around it.
+- DM request previews show the message instead of the raw `{"k":"t",…}`
+  envelope; the DM header no longer claims "online-only delivery".
+- Mobile: posts and DM images open a full-screen viewer; opening a thread
+  focuses the message box; stories and inbox show names and avatars.
+- New: `npx electron test/ui/run.js`, 39 UI interaction tests that click
+  through the real interface against a demo engine.
+
 ## v2.6 — security hardening, open-source release prep
 **Upgrade every install (desktop and mobile) together: protocol v2.** v2.6
 clients stop delivering queued DMs to older clients, and older clients

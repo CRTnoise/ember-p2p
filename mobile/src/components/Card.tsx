@@ -5,6 +5,7 @@ import { api } from '../rpc'
 import { useEmber } from '../../App'
 import { MONO, SANS } from '../theme'
 import { copyText } from '../clipboard'
+import ImageViewer from './ImageViewer'
 
 const ago = (ts: number) => {
   const s = (Date.now() - ts) / 1000
@@ -64,8 +65,7 @@ function CardBase ({ it, profiles, replyCounts, savedIds, discover, onProfile, o
   const [thread, setThread] = useState(false)
   const [repliesList, setReplies] = useState<any[]>([])
   const [replyText, setReplyText] = useState('')
-  const [fullImg, setFullImg] = useState<string | null>(null)
-  const [imgBusy, setImgBusy] = useState(false)
+  const [viewer, setViewer] = useState(false)
   const [followed, setFollowed] = useState(false)
   const [quoted, setQuoted] = useState<any>(null)
 
@@ -156,33 +156,18 @@ function CardBase ({ it, profiles, replyCounts, savedIds, discover, onProfile, o
 
       {/* media */}
       {(it.mediaSeq != null || it.thumb) && (
-        <TouchableOpacity
-          activeOpacity={0.9}
-          disabled={imgBusy || !!fullImg}
-          onPress={async () => {
-            if (fullImg || it.mediaSeq == null) return
-            setImgBusy(true)
-            try {
-              const full = await api.getMedia(it.author, it.mediaSeq)
-              if (full) setFullImg(full)
-              else Alert.alert('No holder online', 'Nobody holding this image is reachable right now. It will load when the author (or someone who saved it) comes online.')
-            } catch (e: any) {
-              Alert.alert('Fetch failed', String(e?.message || e))
-            }
-            setImgBusy(false)
-          }}>
-          {(fullImg || it.thumb)
-            ? <Image source={{ uri: fullImg || it.thumb }} style={[s.media, { borderColor: t.line }]} resizeMode="cover" />
+        <>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setViewer(true)}>
+          {it.thumb
+            ? <Image source={{ uri: it.thumb }} style={[s.media, { borderColor: t.line }]} resizeMode="cover" />
             : <View style={[s.media, s.mediaEmpty, { borderColor: t.line, backgroundColor: t.panel }]}>
-                <Text style={{ fontFamily: MONO, fontSize: 9, color: t.soft }}>IMAGE · TAP TO FETCH</Text>
+                <Text style={{ fontFamily: MONO, fontSize: 9, color: t.soft }}>IMAGE · TAP TO VIEW</Text>
               </View>}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 6 }}>
-            {imgBusy && <ActivityIndicator size="small" color={t.ink} />}
-            <Text style={{ fontFamily: MONO, fontSize: 8, letterSpacing: 1.5, color: t.soft }}>
-              {imgBusy ? 'PULLING FROM HOLDERS…' : fullImg ? 'FULL · YOU SEED IT NOW' : 'PREVIEW · TAP FOR FULL'}
-            </Text>
-          </View>
+          <Text style={{ fontFamily: MONO, fontSize: 8, letterSpacing: 1.5, color: t.soft, paddingHorizontal: 16, paddingTop: 6 }}>TAP TO VIEW</Text>
         </TouchableOpacity>
+        <ImageViewer visible={viewer} onClose={() => setViewer(false)} src={it.thumb} title={name}
+          media={it.mediaSeq != null ? { author: it.author, seq: it.mediaSeq } : null} />
+        </>
       )}
 
       {/* actions */}

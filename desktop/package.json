@@ -1,6 +1,6 @@
 {
   "name": "ember-desktop",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "private": true,
   "description": "Serverless peer-to-peer social network — no servers, no accounts, discovery by meaning (desktop client)",
   "author": "CRTnoise",

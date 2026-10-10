@@ -13,7 +13,8 @@ public** networks, or the DHT can't hole-punch and you'll see 0 peers.
 
 ## Test
 ```bash
-npm test     # protocol hardening suite: sanitizer, signatures, DM proof, deletes
+npm test                    # protocol suite: sanitizer, signatures, DM proof, deletes
+npx electron test/ui/run.js # UI suite: clicks through the real interface (39 cases)
 ```
 
 ## Build

@@ -473,6 +473,26 @@
   .scsize{width:90px}
   .schint{font:400 10px/1.4 var(--mono);color:var(--soft);padding:0 14px 12px}
 
+  /* ============ IMAGE VIEWER ============ */
+  .lightbox{position:fixed;inset:0;z-index:72;display:none;align-items:center;justify-content:center;
+            background:color-mix(in srgb, var(--canvas) 12%, rgba(0,0,0,.88))}
+  .lightbox.open{display:flex;animation:fadein var(--dur) var(--ease-out)}
+  .lbbox{display:flex;flex-direction:column;max-width:94vw;max-height:94vh;background:var(--paper);
+         border:1px solid var(--line);box-shadow:8px 8px 0 var(--shadow);animation:rise var(--dur-slow) var(--ease-out)}
+  .lbhead{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line)}
+  .lbhead .t{font:700 10px/1 var(--mono);letter-spacing:.2em;color:var(--ink)}
+  .lbhead .m{font:400 10px/1 var(--mono);letter-spacing:.12em;color:var(--muted)}
+  .lbstage{overflow:auto;background:#000;display:flex;align-items:center;justify-content:center;min-width:320px;min-height:200px}
+  .lbstage img{display:block;max-width:92vw;max-height:calc(94vh - 84px);object-fit:contain;cursor:zoom-in}
+  .lbstage.zoom{align-items:flex-start;justify-content:flex-start}
+  .lbstage.zoom img{max-width:none;max-height:none;cursor:zoom-out}
+  .lbstage img.loading{filter:blur(6px) saturate(.7);opacity:.75;transition:filter var(--dur) var(--ease-out),opacity var(--dur)}
+  .lbfoot{padding:8px 14px;border-top:1px solid var(--line);font:400 9px/1.4 var(--mono);letter-spacing:.14em;color:var(--soft)}
+
+  /* a post you were sent to (from a notification) */
+  .card.focus{box-shadow:0 0 0 2px var(--accent),6px 6px 0 var(--shadow);animation:focuspulse 1.4s var(--ease-out) 2}
+  @keyframes focuspulse{50%{box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent),6px 6px 0 var(--shadow)}}
+
   /* ============ EMBER VIDEO PLAYER (popup) ============ */
   .vplayer{position:fixed;inset:0;background:color-mix(in srgb, var(--canvas) 15%, rgba(0,0,0,.86));display:none;
            align-items:center;justify-content:center;z-index:70}
@@ -674,6 +694,14 @@
     </div>
   </div>
 </div>
+<div class="lightbox" id="lightbox">
+  <div class="lbbox">
+    <div class="lbhead"><span class="t" id="lbTitle">IMAGE</span><span class="m" id="lbMeta"></span>
+      <span class="sclose" id="lbClose" style="margin-left:auto">×</span></div>
+    <div class="lbstage" id="lbStage"><img id="lbImg" alt=""></div>
+    <div class="lbfoot" id="lbFoot">click image to zoom · esc to close</div>
+  </div>
+</div>
 <div class="vplayer" id="vplayer">
   <div class="vpbox">
     <div class="vphead"><span class="t" id="vpTitle">VIDEO</span>
@@ -819,6 +847,8 @@ async function wireVoice (root) {
 }
 
 const toast = m => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1700) }
+// keys get pasted from share sheets and chats: take the first 64-hex run
+const keyFrom = s => { const m = String(s || '').normalize('NFKC').toLowerCase().match(/[0-9a-f]{64}/); return m ? m[0] : null }
 const esc = s => { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML }
 // attribute-safe escaping: esc() does NOT escape quotes, so it must never be used inside attributes
 const attr = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -1117,17 +1147,60 @@ window.ember.onVideoProgress(p => {
 
 function wireMedia (root) {
   wireVideo(root)
-  root.querySelectorAll('.postimg[data-media]').forEach(img => {
-    img.onclick = async () => {
-      const [a, s] = img.dataset.media.split(':')
-      if (s === 'null' || s === 'undefined') return
-      const tag = img.nextElementSibling
-      tag && (tag.textContent = 'FETCHING FULL IMAGE…')
-      const full = await window.ember.getMedia(a, +s)
-      if (full) { img.src = full; img.classList.remove('thumb'); img.removeAttribute('data-media'); tag && (tag.textContent='FULL') }
-      else tag && (tag.textContent = 'NO HOLDER ONLINE — PREVIEW ONLY')
+  root.querySelectorAll('.postimg').forEach(img => {
+    if (img.closest('.vidwrap')) return                  // video thumbs open the player instead
+    img.onclick = () => {
+      const [a, s] = (img.dataset.media || '').split(':')
+      const card = img.closest('[data-author]')
+      openImage({ src: img.getAttribute('src'), author: card ? card.dataset.author : a,
+                  media: (s && s !== 'null' && s !== 'undefined') ? { a, s: +s } : null })
     }
   })
+}
+
+/* ============ IMAGE VIEWER ============ */
+const MEDIA_FULL = new Map()   // 'author:seq' -> full data URL, so a second open is instant
+async function openImage ({ src, author, media }) {
+  const lb = $('#lightbox'), img = $('#lbImg'), stage = $('#lbStage')
+  stage.classList.remove('zoom')
+  img.src = safeSrc(src || '')
+  $('#lbTitle').textContent = author ? nameFor(author).toUpperCase() : 'IMAGE'
+  $('#lbMeta').textContent = ''
+  lb.classList.add('open')
+  if (!media) { img.classList.remove('loading'); $('#lbFoot').textContent = 'click image to zoom · esc to close'; return }
+  const key = media.a + ':' + media.s
+  if (MEDIA_FULL.has(key)) { img.src = MEDIA_FULL.get(key); img.classList.remove('loading'); $('#lbFoot').textContent = 'full image · click to zoom · esc to close'; return }
+  img.classList.add('loading'); $('#lbFoot').textContent = 'pulling the full image from whoever holds it…'
+  const full = safeSrc(await window.ember.getMedia(media.a, media.s) || '')
+  if (!lb.classList.contains('open') || $('#lbImg') !== img) return
+  img.classList.remove('loading')
+  if (full) { MEDIA_FULL.set(key, full); img.src = full; $('#lbFoot').textContent = 'full image · you seed it now · click to zoom · esc to close' }
+  else $('#lbFoot').textContent = 'no holder online right now — showing the preview'
+}
+function closeImage () { $('#lightbox').classList.remove('open'); $('#lbImg').removeAttribute('src') }
+$('#lbClose').onclick = closeImage
+$('#lightbox').addEventListener('click', e => { if (e.target === $('#lightbox')) closeImage() })
+$('#lbImg').addEventListener('click', () => $('#lbStage').classList.toggle('zoom'))
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#lightbox').classList.contains('open')) closeImage() })
+// images inside DM bubbles (rail thread and full DM view)
+document.addEventListener('click', e => {
+  const im = e.target.closest && e.target.closest('.bubble img')
+  if (im) openImage({ src: im.getAttribute('src'), author: IR_ACTIVE || DM_ACTIVE })
+})
+
+/* ============ FOCUS A POST (from notifications) ============ */
+async function focusPost (author, seq) {
+  await openProfile(author)
+  let card = null
+  for (let i = 0; i < 40 && !card; i++) {
+    card = document.querySelector(`#ppage .card[data-author="${author}"][data-seq="${seq}"]`)
+    if (!card) await new Promise(r => setTimeout(r, 75))
+  }
+  if (!card) { toast('THAT POST IS NO LONGER AVAILABLE'); return }
+  card.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  card.classList.add('focus'); setTimeout(() => card.classList.remove('focus'), 3500)
+  const t = card.querySelector('.thread')
+  if (t && !t.classList.contains('open')) toggleThread(card, author, seq)
 }
 
 /* ============ THREADS (scoped to card — works everywhere incl. profiles) ============ */
@@ -1202,7 +1275,7 @@ async function renderDiscover () {
   l.textContent = q ? `NEAREST TO “${q.toUpperCase().slice(0,40)}”` : 'DRIFTING THROUGH YOUR BUCKETS'
   feed.appendChild(l)
   if (!DISC.items.length) {
-    feed.innerHTML += '<div class="empty">no strangers in your buckets yet. the more you post, the more meaning-space you occupy.</div>'
+    feed.insertAdjacentHTML('beforeend', '<div class="empty">no strangers in your buckets yet. the more you post, the more meaning-space you occupy.</div>')
     return
   }
   DISC.items.forEach((it, i) => feed.appendChild(card({ ...it, type: it.kind==='quote'?'quote':'post' }, { discover:true, score: it.score, stagger: i })))
@@ -1214,7 +1287,7 @@ async function renderSaved () {
   SAVED_IDS = new Set(list.map(a => a.author+':'+a.seq))
   const feed = $('#feed'); feed.innerHTML=''
   const l=document.createElement('div'); l.className='daylabel'; l.textContent='SAVED · RE-BROADCAST THROUGH YOU'; feed.appendChild(l)
-  if (!list.length) { feed.innerHTML += '<div class="empty">nothing saved. saving keeps a permanent local copy — with the author\'s tag — and you broadcast it even when they\'re gone.</div>'; return }
+  if (!list.length) { feed.insertAdjacentHTML('beforeend', '<div class="empty">nothing saved. saving keeps a permanent local copy — with the author\'s tag — and you broadcast it even when they\'re gone.</div>'); return }
   list.forEach((it, i) => feed.appendChild(card({ ...it, type:'post' }, { stagger: i })))
   wireCards(feed)
 }
@@ -1225,7 +1298,7 @@ async function renderNotifs () {
   const list = await window.ember.notifsList()
   const page = $('#notifpage')
   page.innerHTML = `<div class="ptabs"><div class="ptab on">NOTIFICATIONS</div></div>`
-  if (!list.length) { page.innerHTML += '<div class="empty">quiet for now. replies to your posts, DMs, and new posts from people you follow land here.</div>' }
+  if (!list.length) { page.insertAdjacentHTML('beforeend', '<div class="empty">quiet for now. replies to your posts, DMs, and new posts from people you follow land here.</div>') }
   for (const n of list) {
     const row = document.createElement('div')
     row.className = 'notifrow' + (n.read ? '' : ' unread')
@@ -1238,6 +1311,7 @@ async function renderNotifs () {
       <div class="nts">${ago(n.ts)}</div>`
     row.onclick = () => {
       if (n.type==='dm') openDm(n.from)
+      else if (n.type==='reply' && n.ref && n.ref.author) focusPost(n.ref.author, n.ref.seq)
       else if (n.type==='reply') openProfile(ME.key)
       else openProfile(n.from)
     }
@@ -1275,7 +1349,7 @@ async function renderInboxRail () {
   const requests = list.filter(c => c.request)
   const convos = list.filter(c => !c.request)
   if (requests.length) {
-    el.innerHTML += `<div class="dmsection">REQUESTS · ${requests.length}</div>`
+    el.insertAdjacentHTML('beforeend', `<div class="dmsection">REQUESTS · ${requests.length}</div>`)
     for (const c of requests) {
       const row = document.createElement('div')
       row.className = 'dmrow'
@@ -1289,8 +1363,8 @@ async function renderInboxRail () {
       el.appendChild(row)
     }
   }
-  if (convos.length) el.innerHTML += `<div class="dmsection">CONVERSATIONS</div>`
-  else if (!requests.length) el.innerHTML += `<div class="empty" style="padding:20px 12px">no conversations yet — hit ✉ DM on any post</div>`
+  if (convos.length) el.insertAdjacentHTML('beforeend', `<div class="dmsection">CONVERSATIONS</div>`)
+  else if (!requests.length) el.insertAdjacentHTML('beforeend', `<div class="empty" style="padding:20px 12px">no conversations yet — hit ✉ DM on any post</div>`)
   for (const c of convos) {
     const row = document.createElement('div')
     row.className = 'dmrow' + (IR_ACTIVE===c.key ? ' on':'')
@@ -1300,8 +1374,8 @@ async function renderInboxRail () {
   }
   const nb = document.getElementById('irNewBtn')
   if (nb) nb.onclick = () => {
-    const k = document.getElementById('irNewKey').value.trim().toLowerCase()
-    if (/^[0-9a-f]{64}$/.test(k)) { document.getElementById('irNewKey').value=''; openDmInRail(k) } else toast('INVALID KEY')
+    const k = keyFrom(document.getElementById('irNewKey').value)
+    if (k) { document.getElementById('irNewKey').value=''; openDmInRail(k) } else toast('NO KEY FOUND — PASTE THE 64-CHARACTER KEY')
   }
 }
 
@@ -1317,6 +1391,7 @@ async function openDmInRail (key) {
   await renderRailMsgs()
   renderInboxRail()
   markRead('dm')
+  setTimeout(() => $('#irText').focus(), 60)
 }
 function closeDmInRail () {
   IR_ACTIVE = null
@@ -1407,12 +1482,12 @@ async function renderDmList () {
   const requests = list.filter(c => c.request)
   const convos = list.filter(c => !c.request)
   if (requests.length) {
-    el.innerHTML += `<div class="dmsection">MESSAGE REQUESTS · ${requests.length}</div>`
+    el.insertAdjacentHTML('beforeend', `<div class="dmsection">MESSAGE REQUESTS · ${requests.length}</div>`)
     for (const c of requests) {
       const row = document.createElement('div')
       row.className = 'dmrow'
       row.innerHTML = `<div class="n">${esc(nameFor(c.key))}</div>
-        <div class="p">${c.last?esc(c.last.text):''}</div>
+        <div class="p">${c.last?esc(dmPreview(c.last.text)):''}</div>
         <div class="reqactions">
           <button class="btn solid acc">ACCEPT</button>
           <button class="btn ign">IGNORE</button>
@@ -1424,7 +1499,7 @@ async function renderDmList () {
       el.appendChild(row)
     }
   }
-  if (convos.length) el.innerHTML += `<div class="dmsection">CONVERSATIONS</div>`
+  if (convos.length) el.insertAdjacentHTML('beforeend', `<div class="dmsection">CONVERSATIONS</div>`)
   for (const c of convos) {
     const row = document.createElement('div')
     row.className = 'dmrow' + (DM_ACTIVE===c.key?' on':'')
@@ -1434,8 +1509,8 @@ async function renderDmList () {
   }
   const nb = document.getElementById('newdmbtn')
   if (nb) nb.onclick = () => {
-    const k = document.getElementById('newdmkey').value.trim().toLowerCase()
-    if (/^[0-9a-f]{64}$/.test(k)) { document.getElementById('newdmkey').value=''; openDm(k) } else toast('INVALID KEY')
+    const k = keyFrom(document.getElementById('newdmkey').value)
+    if (k) { document.getElementById('newdmkey').value=''; openDm(k) } else toast('NO KEY FOUND — PASTE THE 64-CHARACTER KEY')
   }
 }
 
@@ -1444,7 +1519,7 @@ async function openDm (key) {
   DM_ACTIVE = key
   const msgs = await window.ember.dmOpen(key)
   $('#dmhead').innerHTML = `${avatarHTML(key)}<span class="who" data-p="${key}">${esc(nameFor(key))}</span>
-    <span class="meta">@${key.slice(0,12)}… · E2E · ONLINE-ONLY DELIVERY</span>`
+    <span class="meta">@${key.slice(0,12)}… · E2E · QUEUED WHEN THEY'RE OFFLINE</span>`
   $('#dmhead').querySelector('.who').onclick = () => openProfile(key)
   const box = $('#dmmsgs'); box.innerHTML=''
   msgs.forEach((m, i) => {
@@ -1458,6 +1533,7 @@ async function openDm (key) {
   wireVoice(box)
   box.scrollTop = box.scrollHeight
   $('#dmtext').disabled = false; $('#dmsend').disabled = false
+  setTimeout(() => $('#dmtext').focus(), 60)
   renderDmList()
   renderInboxRail()
   markRead('dm')
