@@ -1,11 +1,21 @@
 # Ember
 
+**A social network with no servers.** No accounts, no company in the middle, no feed algorithm.
+
+[![Download](https://img.shields.io/github/v/release/CRTnoise/ember-p2p?label=download&style=for-the-badge&color=e8590c)](https://github.com/CRTnoise/ember-p2p/releases/latest)
+![Downloads](https://img.shields.io/github/downloads/CRTnoise/ember-p2p/total?style=for-the-badge&color=333)
+
+### Quick start (about 30 seconds)
+1. **Download** from the [latest release](https://github.com/CRTnoise/ember-p2p/releases/latest):
+   `Ember-Setup-x.y.z.exe` (Windows installer), `Ember-x.y.z-portable.exe` (Windows, no install) or `Ember-x.y.z.AppImage` (Linux, run `chmod +x` on it first).
+2. **Run it.** The build isn't code-signed yet, so Windows will say "Windows protected your PC": click **More info → Run anyway**.
+3. **Allow Ember on private *and* public networks** when Windows asks, or it can't find anyone.
+
+That's it, you're in the swarm. Want to build it yourself? See [Build from source](#build-from-source).
+
 ![Ember on desktop and Android](docs/media/hero.png)
 
-**A social network with no servers.** No accounts, no company in the middle,
-no feed algorithm. Your identity is a keypair, your posts are a signed log on
-your own device, and the people who follow you keep your posts alive by
-re-sharing them. When nobody keeps something warm, it fades.
+Your identity is a keypair, your posts are a signed log on your own device, and the people who follow you keep your posts alive by re-sharing them. When nobody keeps something warm, it fades.
 
 Discovery works by *meaning*: posts are hashed into buckets of nearby topics
 (locality-sensitive hashing), so writing about something puts you next to
