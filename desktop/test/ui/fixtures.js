@@ -176,15 +176,25 @@
   ]
   const why = [{ k: 'topic', topic: 'art' }, { k: 'follow' }, { k: 'compass', terms: ['riso', 'zine'] }, { k: 'wide' }]
   const ok = (v) => Promise.resolve(v)
+  let webst = { on: true, headless: false, saved: { on: true, lan: false, port: 7777 }, urls: ['http://127.0.0.1:7777'], code: '12345678', codeExpires: now + 9 * m, locked: false, error: null, current: null,
+    devices: [{ id: 'd1', label: 'Firefox on Android', created: now - 2 * d, lastSeen: now - 5 * m }, { id: 'd2', label: 'Chrome on Windows', created: now - d, lastSeen: now - h }] }
 
   const noop = () => {}
   const emit = (fn, v, delay = 300) => setTimeout(() => fn(v), delay)
   window.DEMO = { ME_KEY, MIRA, TOVAR, STRANGER, LANP }
+  // listeners the page registers, so tests can play engine events: __emit('onFeedUpdated', {...})
+  window.__on = {}
+  window.__emit = (n, v) => (window.__on[n] || []).forEach(cb => cb(v))
   window.ember = {
     me: () => ok({ key: ME_KEY, length: 32, profile: profiles[ME_KEY] }),
     timeline: () => ok({ items, profiles, follows: [MIRA, TOVAR, OLAND, ADA, NOOR], peers: 6, seeders: 4, replyCounts }),
     discover: (q) => ok({ items: (q ? discoverItems : discoverItems.slice().sort((a, b) => b.ts - a.ts)).map((it, i) => ({ ...it, why: q ? { k: 'search' } : why[i % why.length], flagged: !q && i === 3 })), profiles, buckets: 24, gossipPeers: 9, dial: taste.dial, quiet: !!Q.get('quiet'), topics: taste.topics.length, commons: true }),
     tasteState: () => ok(taste),
+    webState: () => ok(webst),
+    webSet: (p) => { webst = { ...webst, saved: { ...webst.saved, ...p }, on: p.on === undefined ? webst.on : p.on }; return ok(webst) },
+    webNewCode: () => { webst = { ...webst, code: '87654321' }; return ok(webst) },
+    webRevoke: (id) => { webst = { ...webst, devices: webst.devices.filter(x => x.id !== id) }; return ok(webst) },
+    webOpen: () => ok(true),
     tasteSet: (p) => { taste = { ...taste, ...p }; return ok(taste) },
     tasteForget: (t) => { taste = { ...taste, terms: taste.terms.filter(x => x.term !== t), avoid: taste.avoid.filter(x => x.term !== t) }; return ok(taste) },
     tasteReset: () => { taste = { ...taste, terms: [], avoid: [] }; return ok(taste) },
@@ -228,5 +238,5 @@
     'block', 'mute', 'unblock', 'unmute', 'notInterested', 'restoreSkip', 'exportIdentity', 'restoreIdentity', 'dmAccept', 'dmIgnore', 'dmSend', 'savePost', 'unsavePost', 'clearCache',
     'winMin', 'winMax', 'winClose']) if (!window.ember[n]) window.ember[n] = () => ok(true)
   for (const n of ['onTranscodeProgress', 'onVideoProgress', 'onNotif', 'onEngineReady', 'onDmReceived', 'onDmPeers', 'onFeedUpdated', 'onDiscoverUpdated', 'onRepliesUpdated', 'onNearUpdated', 'onRestoreState', 'onModUpdated', 'onFiresUpdated', 'onCommonsState'])
-    if (!window.ember[n]) window.ember[n] = noop
+    if (!window.ember[n]) window.ember[n] = (cb) => { (window.__on[n] = window.__on[n] || []).push(cb) }
 })()

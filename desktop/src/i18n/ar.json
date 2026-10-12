@@ -337,7 +337,30 @@
   "YOU'RE IN.": "أنت في الداخل.",
   "Post something — it lands in meaning-buckets where nearby strangers drift. Follow a friend's key to sync their feed and start keeping it warm. Close the window and Ember keeps seeding from the tray. The network is only as alive as the people holding it.": "انشر شيئًا — سيحطّ في سلال المعنى حيث ينجرف غرباء قريبون. تابع مفتاح صديق لتزامن خلاصته وتبدأ في إبقائها دافئة. أغلق النافذة ويواصل Ember البذر من شريط النظام. الشبكة حيّة بقدر من يحملونها.",
   "ENTER THE SWARM ◆": "ادخل السرب ◆",
-  "▤ POST": "▤ منشور"
+  "▤ POST": "▤ منشور",
+  "WEB ACCESS": "الوصول عبر الويب",
+  "USE EMBER IN A BROWSER": "استخدام Ember في المتصفح",
+  "serve this interface to web browsers. Each browser must be paired once with a code shown here, and you can sign any of them out below.": "يقدّم هذه الواجهة لمتصفحات الويب. يجب ربط كل متصفح مرة واحدة برمز يظهر هنا، ويمكنك تسجيل خروج أيّ منها أدناه.",
+  "OTHER DEVICES ON MY NETWORK": "أجهزة أخرى على شبكتي",
+  "let phones and laptops on the same Wi-Fi open it too. It's plain HTTP: anyone on that network can watch the traffic, so don't turn this on on public Wi-Fi.": "يسمح للهواتف والحواسيب على شبكة Wi-Fi نفسها بفتحه أيضًا. إنه HTTP غير مشفّر: أي شخص على تلك الشبكة يمكنه مراقبة البيانات، فلا تفعّله على شبكة Wi-Fi عامة.",
+  "ADDRESS": "العنوان",
+  "PAIRING CODE": "رمز الربط",
+  "enter it in the browser you want to pair. Each code works once.": "أدخله في المتصفح الذي تريد ربطه. كل رمز يعمل مرة واحدة.",
+  "pairing is paused for a few minutes after too many wrong codes.": "الربط متوقف لبضع دقائق بعد رموز خاطئة كثيرة.",
+  "Expires in 1 min.": "ينتهي خلال دقيقة.",
+  "NEW CODE": "رمز جديد",
+  "OPEN IN BROWSER": "افتح في المتصفح",
+  "PAIRED BROWSERS": "المتصفحات المرتبطة",
+  "THIS BROWSER": "هذا المتصفح",
+  "no browser paired yet.": "لا يوجد متصفح مرتبط بعد.",
+  "SIGN OUT": "تسجيل الخروج",
+  "Sign this browser out? You will need a new pairing code to come back.": "تسجيل خروج هذا المتصفح؟ ستحتاج رمز ربط جديدًا للعودة.",
+  "YOU'RE USING EMBER IN A BROWSER": "أنت تستخدم Ember في متصفح",
+  "this page is a window onto the Ember node that serves it. Turning web access on or off, and the identity backup, happen on the computer running Ember.": "هذه الصفحة نافذة على عقدة Ember التي تقدّمها. تشغيل الوصول عبر الويب أو إيقافه، والنسخ الاحتياطي للهوية، يتمّان على الحاسوب الذي يشغّل Ember.",
+  "only on the computer running Ember": "فقط على الحاسوب الذي يشغّل Ember",
+  "WEB ACCESS ON": "الوصول عبر الويب مفعّل",
+  "WEB ACCESS OFF": "الوصول عبر الويب متوقف",
+  "LOST CONTACT WITH EMBER · RECONNECTING…": "انقطع الاتصال بـ Ember · إعادة الاتصال…"
  },
  "patterns": [
   [
@@ -471,6 +494,18 @@
   [
    "^network error: (.+)$",
    "خطأ في الشبكة: $1"
+  ],
+  [
+   "^Expires in (\\d+) min\\.$",
+   "ينتهي خلال $1 دقيقة."
+  ],
+  [
+   "^last seen (\\S+)$",
+   "آخر ظهور منذ $1"
+  ],
+  [
+   "^port (\\d+) is already in use$",
+   "المنفذ $1 مستخدم بالفعل"
   ]
  ]
 }

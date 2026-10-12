@@ -337,7 +337,30 @@
   "YOU'RE IN.": "TU Y ES.",
   "Post something — it lands in meaning-buckets where nearby strangers drift. Follow a friend's key to sync their feed and start keeping it warm. Close the window and Ember keeps seeding from the tray. The network is only as alive as the people holding it.": "Publie quelque chose — ça atterrit dans des cases de sens où dérivent des inconnus proches. Suis la clé d'un ami pour synchroniser son fil et commencer à le garder au chaud. Ferme la fenêtre et Ember continue de partager depuis la barre système. Le réseau n'est vivant que grâce aux gens qui le portent.",
   "ENTER THE SWARM ◆": "ENTRER DANS L'ESSAIM ◆",
-  "▤ POST": "▤ PUBLICATION"
+  "▤ POST": "▤ PUBLICATION",
+  "WEB ACCESS": "ACCÈS WEB",
+  "USE EMBER IN A BROWSER": "UTILISER EMBER DANS UN NAVIGATEUR",
+  "serve this interface to web browsers. Each browser must be paired once with a code shown here, and you can sign any of them out below.": "sert cette interface aux navigateurs web. Chaque navigateur doit être associé une fois avec un code affiché ici, et tu peux déconnecter n'importe lequel ci-dessous.",
+  "OTHER DEVICES ON MY NETWORK": "AUTRES APPAREILS DE MON RÉSEAU",
+  "let phones and laptops on the same Wi-Fi open it too. It's plain HTTP: anyone on that network can watch the traffic, so don't turn this on on public Wi-Fi.": "permet aux téléphones et ordinateurs sur le même Wi-Fi de l'ouvrir aussi. C'est du HTTP simple : n'importe qui sur ce réseau peut voir le trafic, alors ne l'active pas sur un Wi-Fi public.",
+  "ADDRESS": "ADRESSE",
+  "PAIRING CODE": "CODE D'ASSOCIATION",
+  "enter it in the browser you want to pair. Each code works once.": "saisis-le dans le navigateur à associer. Chaque code ne sert qu'une fois.",
+  "pairing is paused for a few minutes after too many wrong codes.": "l'association est suspendue quelques minutes après trop de codes erronés.",
+  "Expires in 1 min.": "Expire dans 1 min.",
+  "NEW CODE": "NOUVEAU CODE",
+  "OPEN IN BROWSER": "OUVRIR DANS LE NAVIGATEUR",
+  "PAIRED BROWSERS": "NAVIGATEURS ASSOCIÉS",
+  "THIS BROWSER": "CE NAVIGATEUR",
+  "no browser paired yet.": "aucun navigateur associé pour l'instant.",
+  "SIGN OUT": "DÉCONNECTER",
+  "Sign this browser out? You will need a new pairing code to come back.": "Déconnecter ce navigateur ? Il faudra un nouveau code d'association pour revenir.",
+  "YOU'RE USING EMBER IN A BROWSER": "TU UTILISES EMBER DANS UN NAVIGATEUR",
+  "this page is a window onto the Ember node that serves it. Turning web access on or off, and the identity backup, happen on the computer running Ember.": "cette page est une fenêtre sur le nœud Ember qui la sert. Activer ou couper l'accès web, et la sauvegarde de l'identité, se font sur l'ordinateur qui fait tourner Ember.",
+  "only on the computer running Ember": "seulement sur l'ordinateur qui fait tourner Ember",
+  "WEB ACCESS ON": "ACCÈS WEB ACTIVÉ",
+  "WEB ACCESS OFF": "ACCÈS WEB COUPÉ",
+  "LOST CONTACT WITH EMBER · RECONNECTING…": "CONTACT PERDU AVEC EMBER · RECONNEXION…"
  },
  "patterns": [
   [
@@ -471,6 +494,18 @@
   [
    "^network error: (.+)$",
    "erreur réseau : $1"
+  ],
+  [
+   "^Expires in (\\d+) min\\.$",
+   "Expire dans $1 min."
+  ],
+  [
+   "^last seen (\\S+)$",
+   "vu il y a $1"
+  ],
+  [
+   "^port (\\d+) is already in use$",
+   "le port $1 est déjà utilisé"
   ]
  ]
 }

@@ -32,6 +32,18 @@ blocklists of people you trust.
 
 Ember speaks **English, French, Chinese and Arabic** (right-to-left included).
 
+**Use it in a browser, or self-host it.** Turn on SETUP › WEB ACCESS and pair a
+browser (or your phone, on the same Wi-Fi) with a code. Or run Ember with no
+window on a home server, a Raspberry Pi or a VPS and use it from anywhere:
+
+```bash
+cd desktop && npm ci --omit=dev && npm run serve      # prints a key and a pairing code
+```
+
+An always-on node also keeps your posts warm while your computer sleeps. See
+[desktop/README.md](desktop/README.md#self-hosting) for the options and how to
+put it behind HTTPS.
+
 **Nearby** (opt-in, off by default) adds proximity in *space*: see who runs
 Ember on the same Wi-Fi, or who opted in near your town. Ember asks your PC
 where it is, snaps that to the nearest town, and shares only the town: your
@@ -50,6 +62,7 @@ interoperates with it.
 | Campfires | live rooms that light when 3+ people share a topic room; signed, memory-only |
 | Moderation | personal blocks and mutes, optional shared blocklists, subscriptions, your circle's lists as a quiet signal |
 | Languages | English, French, Chinese, Arabic (RTL) |
+| Web / self-hosted | the same interface in any browser (paired with a code); `npm run serve` runs a headless node under plain Node |
 | Nearby | opt-in: signed beacons on the local network, and grid-cell swarm topics around your town (PC location snapped to a town; only the town is shared) |
 | Posts | text with light markdown, images, video (desktop, transcoded with FFmpeg), quotes, replies, reposts, 24h stories |
 | Messages | end-to-end encrypted DMs (text, images, voice notes on desktop), offline queue, message requests |

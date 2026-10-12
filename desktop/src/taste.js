@@ -23,6 +23,20 @@ const LANGS = ['en', 'fr', 'zh', 'ar']
 const TAU = 21 * 86_400_000   // compass memory: weights halve in ~2 weeks
 const MAX_TERMS = 400
 
+// Embedding a post costs ~1 ms (hundreds of hashes). Discover looks at up to
+// 5000 posts, so each text's embedding and topics are computed once and kept.
+function memo (fn, max = 8000) {
+  const m = new Map()
+  return (key) => {
+    let v = m.get(key)
+    if (v !== undefined) { m.delete(key); m.set(key, v); return v }
+    v = fn(key); m.set(key, v)
+    if (m.size > max) m.delete(m.keys().next().value)
+    return v
+  }
+}
+const embedOf = memo((text) => disc.embed(text || ''))
+
 function topicTopic (id) { return crypto.createHash('sha256').update(`ember/v1/topic/${id}`).digest() }
 
 // ---- recognising what a text is about ----
@@ -53,12 +67,14 @@ function topicHits (text) {
   return out.sort((a, b) => b.hits - a.hits)
 }
 // topics a text is clearly about: two different seed terms, or one plus meaning
-function classify (text, max = 2) {
-  const v = disc.embed(text)
+const SEED_VEC = new Map(CATALOG.map(t => [t.id, LANGS.map(l => disc.embed(t.seeds[l] || ''))]))
+const classify2 = memo((text) => {
   const long = String(text || '').trim().length >= 25 // one weak word in a tiny post ("Hello World!") says nothing
-  return topicHits(text).filter(h => h.hits >= 2 || h.key || (long && LANGS.some(l => disc.cosine(v, disc.embed(BY_ID.get(h.id).seeds[l] || '')) >= 0.2)))
-    .slice(0, max).map(h => h.id)
-}
+  let v = null
+  return topicHits(text).filter(h => h.hits >= 2 || h.key || (long && SEED_VEC.get(h.id).some(s => disc.cosine(v || (v = embedOf(text)), s) >= 0.2)))
+    .slice(0, 2).map(h => h.id)
+})
+function classify (text, max = 2) { return classify2(String(text || '')).slice(0, max) }
 
 // script-level language guess, enough for "languages I read"
 function scriptOf (text) {
@@ -156,17 +172,28 @@ function compassTopics (vec, dial) {
   if (dial >= 3) for (const c of cs) push(c.table, c.code ^ ((1 << disc.BITS) - 1)) // the opposite corner
   return [...out.values()]
 }
-// rank Discover: FAMILIAR prefers posts closest to the compass, STRANGE prefers
-// the ones furthest from it that still arrived in your buckets
-function rank (items, vec, dial, now = Date.now()) {
-  if (!vec) return items.map(a => ({ ...a, near: null })).sort((a, b) => b.ts - a.ts)
-  const sims = items.map(a => disc.cosine(vec, disc.embed(a.text || '')))
-  const max = Math.max(0.05, ...sims)
-  const target = max * (1 - dial / 3)
-  return items.map((a, i) => {
-    const rec = Math.exp(-(now - a.ts) / (3 * 86_400_000))
-    return { ...a, near: sims[i], rank: 0.72 * (1 - Math.abs(sims[i] - target) / max) + 0.28 * rec }
-  }).sort((a, b) => b.rank - a.rank)
+// Discover: the dial picks WHICH posts you see, time decides the ORDER.
+// Posts are lined up from closest to furthest from the compass; each dial step
+// keeps one band of that line, and the band is shown newest first:
+//   FAMILIAR  the closest 40 %      ·   the closest 70 %
+//   ··        the furthest 70 %     ·   STRANGE  the furthest 40 %
+// weight(a) (optional) scales a post's closeness, e.g. 0.6 to rank one down.
+const BANDS = [[0, 0.4], [0, 0.7], [0.3, 1], [0.6, 1]]
+const MIN_SHOWN = 6
+function rank (items, vec, dial, weight) {
+  const newest = (a, b) => b.ts - a.ts
+  if (!vec) return items.map(a => ({ ...a, near: null })).sort(newest)
+  const scored = items.map(a => ({ ...a, near: disc.cosine(vec, embedOf(a.text)) * (weight ? weight(a) : 1) }))
+  const line = scored.slice().sort((a, b) => b.near - a.near) // closest first
+  const n = line.length
+  const [lo, hi] = BANDS[Math.max(0, Math.min(3, dial | 0))] || BANDS[1]
+  let keep = line.filter((a, i) => { const p = n > 1 ? i / (n - 1) : 0; return p >= lo && p <= hi })
+  // a small network still shows something: the posts nearest the band
+  if (keep.length < Math.min(n, MIN_SHOWN)) {
+    const mid = (lo + hi) / 2
+    keep = line.map((a, i) => [a, Math.abs((n > 1 ? i / (n - 1) : 0) - mid)]).sort((x, y) => x[1] - y[1]).slice(0, Math.min(n, MIN_SHOWN)).map(x => x[0])
+  }
+  return keep.sort(newest)
 }
 // the honest one-line reason a post is in your Discover
 function why (item, ctx) {
@@ -181,4 +208,4 @@ function why (item, ctx) {
   return { k: 'wide' }
 }
 
-module.exports = { CATALOG, LANGS, Taste, topicTopic, classify, topicHits, keyTerms, scriptOf, readable, compassTopics, rank, why }
+module.exports = { CATALOG, LANGS, Taste, embedOf, topicTopic, classify, topicHits, keyTerms, scriptOf, readable, compassTopics, rank, why }

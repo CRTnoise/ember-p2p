@@ -54,7 +54,7 @@ contextBridge.exposeInMainWorld('ember', {
   onDmReceived: (cb) => ipcRenderer.on('dm-received', (_e, k) => cb(k)),
   onDmPeers: (cb) => ipcRenderer.on('dm-peers', (_e, n) => cb(n)),
   onFeedUpdated: (cb) => ipcRenderer.on('feed-updated', (_e, k) => cb(k)),
-  onDiscoverUpdated: (cb) => ipcRenderer.on('discover-updated', () => cb()),
+  onDiscoverUpdated: (cb) => ipcRenderer.on('discover-updated', (_e, ev) => cb(ev)),
   onRepliesUpdated: (cb) => ipcRenderer.on('replies-updated', (_e, id) => cb(id)),
   onPeers: (cb) => ipcRenderer.on('peers', (_e, n) => cb(n)),
   onGossipPeers: (cb) => ipcRenderer.on('gossip-peers', (_e, n) => cb(n)),
@@ -84,5 +84,12 @@ contextBridge.exposeInMainWorld('ember', {
   fireMessages: (fire) => ipcRenderer.invoke('fire-messages', { fire }),
   fireSend: (fire, text) => ipcRenderer.invoke('fire-send', { fire, text }),
   onFiresUpdated: (cb) => ipcRenderer.on('fires-updated', (_e, ev) => cb(ev)),
-  onCommonsState: (cb) => ipcRenderer.on('commons-state', (_e, on) => cb(on))
+  onCommonsState: (cb) => ipcRenderer.on('commons-state', (_e, on) => cb(on)),
+  // v2.9: web access
+  webState: () => ipcRenderer.invoke('web-state'),
+  webSet: (patch) => ipcRenderer.invoke('web-set', patch),
+  webNewCode: () => ipcRenderer.invoke('web-new-code'),
+  webRevoke: (id) => ipcRenderer.invoke('web-revoke', { id }),
+  webOpen: () => ipcRenderer.invoke('web-open'),
+  onWebUpdated: (cb) => ipcRenderer.on('web-updated', (_e, ev) => cb(ev))
 })

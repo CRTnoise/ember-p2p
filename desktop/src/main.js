@@ -1,11 +1,21 @@
-// EMBER — main process
+// EMBER — main process (also runs headless under plain Node: `npm run serve`)
 // Two network layers:
 //   1. FEED layer   — Corestore + Hyperswarm: signed append-only logs, replication, re-seeding.
 //   2. GOSSIP layer — a second Hyperswarm whose topics come from LSH codes (discovery)
 //                     and per-post rendezvous hashes (replies). Connections exchange
 //                     newline-delimited JSON announcements.
-const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, nativeImage, dialog } = require('electron')
+// Electron when there is one; otherwise headless.js stands in (no window, no
+// tray, no dialogs) and people use Ember through the web interface (web.js)
+const HEADLESS = !process.versions.electron
+const host = HEADLESS ? require('./headless') : require('electron')
+const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, nativeImage, dialog } = host
 Menu.setApplicationMenu(null)
+const { Web } = require('./web')
+// every IPC handler is registered here once, for the window (ipcMain) and for
+// browsers (web.js calls the same functions)
+const HANDLERS = new Map()
+function handle (ch, fn) { HANDLERS.set(ch, fn); ipcMain.handle(ch, fn) }
+let web = null
 const path = require('path')
 const fs = require('fs')
 const Corestore = require('corestore')
@@ -73,7 +83,9 @@ let SETTINGS = {
   theme: 'paper', tailWindow: 150, commons: true, keepDmHistory: true, nearLan: false, nearArea: null, nearHidden: false,
   // v2.8: taste, languages, circle moderation, campfires
   onboarded: false, uiLang: null, readLangs: null, topics: [], topicText: '', dial: 1, onlyMyLangs: false,
-  publishBlocklist: false, modSubs: [], circleSignals: true, campfires: true, decoySeed: null
+  publishBlocklist: false, modSubs: [], circleSignals: true, campfires: true, decoySeed: null,
+  // v2.9: the interface in a browser (desktop; the headless server is always on)
+  web: { on: false, lan: false, port: 7777 }
 }
 let nearby = null              // proximity in space (nearby.js); both channels opt-in
 let tasteStore = null          // taste.js: the compass, kept on this machine only
@@ -85,6 +97,7 @@ let circleSoft = new Set()     // authors on 1 list of someone I follow: ranked 
 let commonsJoined = false
 const roomsJoined = new Map()  // hexTopic -> topic buf: topic rooms, decoys, compass buckets
 const postRooms = new Set()    // topic rooms joined because I posted about that topic
+const discJoined = new Set()   // LSH buckets joined from what I and the people I follow write
 let myName = ''
 const notifs = []             // {id,type:'reply'|'dm'|'post',from,ts,text,ref,read}
 const dmAccepted = new Set()  // keys whose message requests were accepted
@@ -121,6 +134,8 @@ function loadSettings () {
   if (!taste.LANGS.includes(SETTINGS.uiLang)) SETTINGS.uiLang = null
   if (SETTINGS.readLangs !== null && !Array.isArray(SETTINGS.readLangs)) SETTINGS.readLangs = null
   if (typeof SETTINGS.topicText !== 'string') SETTINGS.topicText = ''
+  const w = SETTINGS.web && typeof SETTINGS.web === 'object' ? SETTINGS.web : {}
+  SETTINGS.web = { on: w.on === true, lan: w.lan === true, port: Number.isInteger(w.port) && w.port >= 1024 && w.port <= 65535 ? w.port : 7777 }
 }
 function saveSettings () { try { fs.writeFileSync(settingsPath(), JSON.stringify(SETTINGS)) } catch {} }
 function dmPath () { return path.join(dataDir, 'dm-history.json') }
@@ -286,7 +301,9 @@ function handleAnnouncement (a) {
     if (discovered.has(id)) return
     discovered.set(id, clean)
     if (discovered.size > 5000) discovered.delete(discovered.keys().next().value) // oldest first
-    broadcast('discover-updated')
+    // only a post someone could actually see counts as "new" for the reload pill
+    taste.embedOf(clean.text) // computed now, while it's one post, not later for 5000 at once
+    if (myCore && clean.author !== hex(myCore.key) && !isHidden(clean.author)) broadcast('discover-updated', { fresh: true, id, ts: clean.ts })
   }
   saveCache()
   // relay once to other gossip peers (epidemic spread within bucket)
@@ -485,7 +502,14 @@ function syncRooms () {
   if (SETTINGS.topicText && SETTINGS.topicText.trim()) for (const t of disc.topicsForText(SETTINGS.topicText)) add(t)
   for (const [k, t] of roomsJoined) if (!want.has(k)) { leaveGossip(t); roomsJoined.delete(k) }
   for (const [k, t] of want) if (!roomsJoined.has(k)) { joinGossip(t, 'room'); roomsJoined.set(k, t) }
-  if (fires) fires.setMine(SETTINGS.campfires ? SETTINGS.topics : [])
+  if (fires) fires.setMine(SETTINGS.campfires ? SETTINGS.topics : [], SETTINGS.campfires ? decoyTopics() : [])
+}
+const searchRooms = new Map() // hexTopic -> topic, oldest first
+function joinSearchRoom (t) {
+  const k = hex(t)
+  if (searchRooms.has(k)) { searchRooms.delete(k); searchRooms.set(k, t); return }
+  searchRooms.set(k, t); joinGossip(t, 'disc')
+  while (searchRooms.size > 72) { const [ok, ot] = searchRooms.entries().next().value; searchRooms.delete(ok); leaveGossip(ot) }
 }
 // a post about music goes into the music room, whether or not I picked music
 function joinTopicRoomsFor (text) {
@@ -512,6 +536,7 @@ async function refreshInterests () {
     const start = Math.max(0, core.length - 20)
     for (let i = start; i < core.length; i++) {
       try {
+        if (!(await core.has(i))) continue // deleted or not synced yet: never wait on it
         const b = await core.get(i, { timeout: 1500 })
         if (b.type === 'post') { texts.push(b.text); if (k === hex(myCore.key)) joinTopicRoomsFor(b.text) }
       } catch {}
@@ -521,7 +546,8 @@ async function refreshInterests () {
   for (const t of texts.slice(-40)) {
     for (const topic of disc.topicsForText(t)) topicSet.set(hex(topic), topic)
   }
-  for (const [, topic] of topicSet) if (!gossipTopics.has(hex(topic))) joinGossip(topic, 'disc')
+  // our own reference on each bucket, so another owner leaving it can't drop it
+  for (const [k, topic] of topicSet) if (!discJoined.has(k)) { discJoined.add(k); joinGossip(topic, 'disc') }
   syncRooms()
   // small-network rendezvous; with topics picked, only while things are quiet
   if (SETTINGS.commons && (!SETTINGS.topics.length || gossipPeers.size < 3)) setCommons(true)
@@ -568,6 +594,13 @@ async function startEngine () {
   setupDm()
   feeds.set(hex(myCore.key), myCore)
   feedSwarm.join(myCore.discoveryKey, { server: true, client: true })
+  // another install of this identity (e.g. the old PC after a restore) may write
+  // too: keep a copy of what it wrote, so our own profile and feed show it
+  let selfLen = myCore.length
+  myCore.on('append', () => {
+    const from = selfLen; selfLen = myCore.length
+    if (from < selfLen) myCore.download({ start: from, end: selfLen }).done().then(() => broadcast('feed-updated', { key: hex(myCore.key), own: true })).catch(() => {})
+  })
   if (restorePending) {
     // don't block boot on the network: sync in the background, then load our state
     syncRestoredLog()
@@ -600,7 +633,7 @@ async function finishRestore () {
   await loadSelfState()
   refreshInterests()
   broadcast('restore-state', { pending: false, length: myCore.length })
-  broadcast('feed-updated', hex(myCore.key))
+  broadcast('feed-updated', { key: hex(myCore.key), own: true })
 }
 
 // follows + profile bootstrap, read from our own log
@@ -642,6 +675,11 @@ function afterBoot () {
     else if (!commonsJoined && peers < lo) setCommons(true)
   }, 90_000)
   setTimeout(refreshCircle, 8_000)
+  // embeddings for the posts cached from last time, a few at a time, so the
+  // first Discover after a start doesn't compute hundreds at once
+  const pending = [...discovered.values()]
+  const warm = () => { for (const a of pending.splice(0, 25)) taste.embedOf(a.text); if (pending.length) setTimeout(warm, 5) }
+  setTimeout(warm, 3000)
   setInterval(refreshCircle, 10 * 60_000)
   setInterval(() => { if (fires) fires.refresh() }, 60_000)
   setInterval(() => {
@@ -656,14 +694,23 @@ async function openFeed (hexKey) {
   await core.ready()
   feeds.set(hexKey, core)
   feedSwarm.join(core.discoveryKey, { server: true, client: true })
+  let seenLen = core.length
   core.on('append', async () => {
-    broadcast('feed-updated', hexKey); tailSync(core)
-    if (follows.has(hexKey)) {
+    tailSync(core)
+    // count only real posts among the new blocks: profile edits, follows, video
+    // chunks, blocklists… must not show up as "NEW POSTS"
+    const from = Math.max(seenLen, core.length - 20), to = core.length
+    seenLen = to
+    let posts = 0
+    for (let i = from; i < to; i++) {
       try {
-        const blk = await core.get(core.length - 1, { timeout: 3000 })
-        if (blk.type === 'post') pushNotif({ type: 'post', from: hexKey, ts: blk.ts, text: (blk.text || '').slice(0, 140), ref: { author: hexKey, seq: core.length - 1 } })
+        const blk = P.sanitizeBlock(await core.get(i, { timeout: 3000 }))
+        if (!blk || !['post', 'quote', 'repost'].includes(blk.type)) continue
+        posts++
+        if (follows.has(hexKey) && blk.type === 'post') pushNotif({ type: 'post', from: hexKey, ts: blk.ts, text: (blk.text || '').slice(0, 140), ref: { author: hexKey, seq: i } })
       } catch {}
     }
+    broadcast('feed-updated', { key: hexKey, posts: follows.has(hexKey) && !isHidden(hexKey) ? posts : 0 })
   })
   tailSync(core)
   return core
@@ -726,7 +773,10 @@ function appendMine (block) {
 }
 function restoreFlag () { return path.join(dataDir, 'RESTORE_PENDING') }
 
-function broadcast (ch, data) { if (win && !win.isDestroyed()) win.webContents.send(ch, data) }
+function broadcast (ch, data) {
+  if (win && !win.isDestroyed()) win.webContents.send(ch, data)
+  if (web) web.broadcast(ch, data)
+}
 
 // Storage philosophy: don't hoard. Re-seed only a sliding tail window of each
 // followed feed (text blocks are tiny); everything older, and all media, is
@@ -778,14 +828,14 @@ function announceOwn (block, seq) {
 
 // ---------- IPC ----------
 
-ipcMain.handle('me', async () => {
+handle('me', async () => {
   if (!engineUp || !myCore) return { key: '', length: 0, profile: null, booting: true }
   return { key: hex(myCore.key), length: myCore.length, profile: await latestProfile(myCore), restorePending }
 })
 // the restored identity really never posted: nothing to download, start writing
-ipcMain.handle('restore-skip', async () => { if (restorePending) await finishRestore(); return true })
+handle('restore-skip', async () => { if (restorePending) await finishRestore(); return true })
 
-ipcMain.handle('post', async (_e, { text, image, thumb, quoteRef }) => {
+handle('post', async (_e, { text, image, thumb, quoteRef }) => {
   let mediaSeq = null
   if (image && typeof image === 'string' && image.length < 30_000_000) {
     await appendMine({ type: 'media', data: image, ts: Date.now() })
@@ -801,21 +851,21 @@ ipcMain.handle('post', async (_e, { text, image, thumb, quoteRef }) => {
   joinGossip(disc.replyTopic(hex(myCore.key), seq), 'reply')
   await gossipSwarm.flush().catch(() => {})
   announceOwn(block, seq)
-  broadcast('feed-updated', hex(myCore.key))
+  broadcast('feed-updated', { key: hex(myCore.key), own: true })
   learn(text, 0.8)
   if (block.ref) learnFrom(block.ref.author, block.ref.seq, 0.8)
   return seq
 })
 
 // full-resolution media, fetched on demand while a holder is online
-ipcMain.handle('get-media', async (_e, { author, seq }) => {
+handle('get-media', async (_e, { author, seq }) => {
   const blk = await resolveBlock(author, seq)
   return blk && blk.type === 'media' ? blk.data : null
 })
 
-ipcMain.handle('resolve-block', async (_e, { author, seq }) => resolveBlock(author, seq))
+handle('resolve-block', async (_e, { author, seq }) => resolveBlock(author, seq))
 
-ipcMain.handle('reply', async (_e, { author, seq, text }) => {
+handle('reply', async (_e, { author, seq, text }) => {
   const block = { type: 'reply', text, ref: { author, seq }, ts: Date.now() }
   await appendMine(block)
   const mySeq = myCore.length - 1
@@ -826,13 +876,13 @@ ipcMain.handle('reply', async (_e, { author, seq, text }) => {
   return mySeq
 })
 
-ipcMain.handle('get-replies', async (_e, { author, seq }) => {
+handle('get-replies', async (_e, { author, seq }) => {
   joinGossip(disc.replyTopic(author, seq), 'reply') // subscribe on view
   const m = replies.get(postId(author, seq))
   return m ? [...m.values()].filter(r => !isHidden(r.author)).sort((a, b) => a.ts - b.ts) : []
 })
 
-ipcMain.handle('set-profile', async (_e, { name, bio, status, avatar }) => {
+handle('set-profile', async (_e, { name, bio, status, avatar }) => {
   const prev = await latestProfile(myCore) || {}
   const blk = {
     type: 'profile',
@@ -846,7 +896,7 @@ ipcMain.handle('set-profile', async (_e, { name, bio, status, avatar }) => {
   await appendMine(blk); myName = blk.name || ''; return true
 })
 
-ipcMain.handle('follow', async (_e, { key }) => {
+handle('follow', async (_e, { key }) => {
   const raw = key
   key = P.cleanKey(key)
   if (!key) throw new Error(`invalid key — expected 64 hex characters, got: ${String(raw).trim().slice(0, 40)}`)
@@ -856,14 +906,14 @@ ipcMain.handle('follow', async (_e, { key }) => {
   return [...follows]
 })
 
-ipcMain.handle('unfollow', async (_e, { key }) => {
+handle('unfollow', async (_e, { key }) => {
   key = P.cleanKey(key) || key
   if (!follows.has(key)) return [...follows]
   await appendMine({ type: 'unfollow', key, ts: Date.now() })
   follows.delete(key); return [...follows]
 })
 
-ipcMain.handle('timeline', async () => {
+handle('timeline', async () => {
   if (!engineUp) return { items: [], profiles: {}, follows: [], peers: 0, replyCounts: {}, booting: true }
   const items = []; const profiles = {}
   for (const [k, core] of feeds) {
@@ -884,7 +934,7 @@ ipcMain.handle('timeline', async () => {
   }
 })
 
-ipcMain.handle('discover', async (_e, { query } = {}) => {
+handle('discover', async (_e, { query } = {}) => {
   if (!engineUp) return { items: [], buckets: 0, gossipPeers: 0, booting: true }
   // If a query is given, rank the gossip cache by cosine proximity; else by the compass.
   const me = hex(myCore.key)
@@ -893,21 +943,21 @@ ipcMain.handle('discover', async (_e, { query } = {}) => {
   const total = list.length
   if (query && query.trim()) {
     const qv = disc.embed(query)
-    // multi-probe: join the query's primary buckets AND their 1-bit neighbors
-    for (const topic of disc.probeTopicsForText(query)) joinGossip(topic, 'disc')
+    // multi-probe: sit in the query's buckets and their 1-bit neighbours (the
+    // last few searches only, so typing doesn't pile up swarm topics forever)
+    for (const topic of disc.probeTopicsForText(query)) joinSearchRoom(topic)
     const now = Date.now()
     list = list.map(a => {
-      const cos = disc.cosine(qv, disc.embed(a.text))
+      const cos = disc.cosine(qv, taste.embedOf(a.text))
       const rec = Math.exp(-(now - a.ts) / (3 * 86_400_000)) // 3-day half-ish decay
       return { ...a, score: cos, rank: 0.78 * cos + 0.22 * rec }
     }).sort((a, b) => b.rank - a.rank)
   } else {
-    const vec = compassVec()
-    const now = Date.now()
-    list = vec ? taste.rank(list, vec, SETTINGS.dial, now) : list.map(a => ({ ...a, rank: Math.exp(-(now - a.ts) / (3 * 86_400_000)) }))
-    // on one list of someone you follow: still shown, further down, flagged
-    list = list.map(a => circleSoft.has(a.author) && !follows.has(a.author) ? { ...a, rank: a.rank * 0.6, flagged: true } : a)
-      .sort((a, b) => b.rank - a.rank)
+    // the dial picks which posts, newest first; someone on one list of a person
+    // you follow counts as further from your compass, and is flagged
+    const soft = (a) => circleSoft.has(a.author) && !follows.has(a.author)
+    list = taste.rank(list, compassVec(), SETTINGS.dial, (a) => soft(a) ? 0.6 : 1)
+      .map(a => soft(a) ? { ...a, flagged: true } : a)
   }
   const ctx = { query: query && query.trim(), follows, topics: SETTINGS.topics, terms: tasteStore ? tasteStore.top(40).map(t => t.term) : [] }
   const items = list.slice(0, 100).map(a => ({ ...a, why: taste.why(a, ctx) }))
@@ -917,7 +967,7 @@ ipcMain.handle('discover', async (_e, { query } = {}) => {
   }
 })
 
-ipcMain.handle('profile-page', async (_e, { key }) => {
+handle('profile-page', async (_e, { key }) => {
   const self = key === hex(myCore.key)
   const core = self ? myCore : (feeds.get(key) || await openFeed(key))
   const all = await readFeed(core, 300)
@@ -934,7 +984,7 @@ ipcMain.handle('profile-page', async (_e, { key }) => {
   }
 })
 
-ipcMain.handle('repost', async (_e, { author, seq }) => {
+handle('repost', async (_e, { author, seq }) => {
   await appendMine({ type: 'repost', ref: { author, seq }, ts: Date.now() })
   learnFrom(author, seq, 1.0)
   return true
@@ -942,7 +992,7 @@ ipcMain.handle('repost', async (_e, { author, seq }) => {
 
 // ---- delete (tombstone + local clear + gossip purge) ----
 
-ipcMain.handle('delete-post', async (_e, { seq }) => {
+handle('delete-post', async (_e, { seq }) => {
   if (!Number.isInteger(seq) || seq < 0 || seq >= myCore.length) throw new Error('bad seq')
   let media = null
   try {
@@ -960,7 +1010,7 @@ ipcMain.handle('delete-post', async (_e, { seq }) => {
   const dts = Date.now()
   const delMsg = { t: 'del', a: { author: hex(myCore.key), seq, ts: dts, edpk: myEdPk, sig: signMsg(P.delMsg(hex(myCore.key), seq, dts)) } }
   for (const s of gossipPeers) sendMsg(s, delMsg)
-  broadcast('feed-updated', hex(myCore.key))
+  broadcast('feed-updated', { key: hex(myCore.key), own: true })
   return true
 })
 
@@ -978,15 +1028,19 @@ function handleDelete (a) {
   const core = feeds.get(a.author)
   if (core) core.clear(a.seq, a.seq + 1).catch(() => {})   // drop our replicated copy
   for (const s of gossipPeers) if (!s._sawDel) sendMsg(s, { t: 'del', a }) // single-hop relay
-  broadcast('discover-updated'); broadcast('feed-updated', a.author)
+  broadcast('discover-updated', { fresh: false }); broadcast('feed-updated', { key: a.author, posts: 0, removed: true })
 }
 
 // ---- video: chunked blocks + watch-to-seed warm cache ----
 
 // Transcode any input to a lean 720p/CRF-28 mp4, then chunk into the core.
 // ffmpeg is bundled — no input format or size restrictions.
-ipcMain.handle('post-video', async (_e, { inputPath, text, thumb }) => {
+handle('post-video', async (e, { inputPath, text, thumb, upload } = {}) => {
+  // a browser can't name a file on this computer: it uploads one (web.js) and
+  // may only point at that upload
+  if (e && e.web) inputPath = web && web.uploadPath(upload)
   if (!inputPath || !fs.existsSync(inputPath)) throw new Error('no input')
+  if (e && e.web) setTimeout(() => fs.rm(inputPath, { force: true }, () => {}), 10 * 60_000)
   const outPath = path.join(os.tmpdir(), 'ember-v-' + Date.now() + '.mp4')
 
   // probe duration for progress percentage
@@ -1037,7 +1091,7 @@ ipcMain.handle('post-video', async (_e, { inputPath, text, thumb }) => {
   joinGossip(disc.replyTopic(hex(myCore.key), seq), 'reply')
   await gossipSwarm.flush().catch(() => {})
   announceOwn(block, seq)
-  broadcast('feed-updated', hex(myCore.key))
+  broadcast('feed-updated', { key: hex(myCore.key), own: true })
   return { seq, size: buf.length, chunks: chunks.length }
 })
 
@@ -1045,7 +1099,7 @@ ipcMain.handle('post-video', async (_e, { inputPath, text, thumb }) => {
 // from this moment this client SEEDS them to other peers (watch-to-seed).
 // The range is recorded in the warm cache: protected from tail eviction,
 // re-seeded across restarts, evicted only by the LRU byte budget.
-ipcMain.handle('get-video', async (_e, { author, meta }) => {
+handle('get-video', async (_e, { author, meta }) => {
   if (!meta || !Number.isInteger(meta.start) || !Number.isInteger(meta.count) || meta.count > 30000) throw new Error('bad meta')
   const core = feeds.get(author) || await openFeed(author)
   await feedSwarm.flush().catch(() => {})
@@ -1069,21 +1123,21 @@ ipcMain.handle('get-video', async (_e, { author, meta }) => {
   return { ok: true, dataUrl: `data:${meta.mime};base64,` + parts.join('') }
 })
 
-ipcMain.handle('warm-cache-stats', async () => ({
+handle('warm-cache-stats', async () => ({
   bytes: watchedBytes(), budget: WATCH_BUDGET,
   items: [...watched.values()].reduce((n, r) => n + r.length, 0)
 }))
 
 // ---- stories (24h ephemeral image blocks in your own core) ----
 
-ipcMain.handle('post-story', async (_e, { image, caption }) => {
+handle('post-story', async (_e, { image, caption }) => {
   if (!image || typeof image !== 'string' || image.length > 300_000) throw new Error('bad story')
   await appendMine({ type: 'story', data: image, caption: (caption || '').slice(0, 140), ts: Date.now() })
-  broadcast('feed-updated', hex(myCore.key))
+  broadcast('feed-updated', { key: hex(myCore.key), own: true })
   return true
 })
 
-ipcMain.handle('stories', async () => {
+handle('stories', async () => {
   if (!engineUp) return []
   const cutoff = Date.now() - 86_400_000
   const out = []
@@ -1107,14 +1161,14 @@ ipcMain.handle('stories', async () => {
   return out
 })
 
-ipcMain.handle('get-story', async (_e, { author, seq }) => {
+handle('get-story', async (_e, { author, seq }) => {
   const blk = await resolveBlock(author, seq)
   return blk && blk.type === 'story' ? { data: blk.data, caption: blk.caption, ts: blk.ts } : null
 })
 
 // ---- moderation ----
 
-ipcMain.handle('block', async (_e, { key }) => {
+handle('block', async (_e, { key }) => {
   if (!P.HEX64.test(key || '')) throw new Error('bad key')
   blocked.add(key); muted.delete(key)
   for (const [id, a] of discovered) if (a.author === key) discovered.delete(id)
@@ -1122,19 +1176,20 @@ ipcMain.handle('block', async (_e, { key }) => {
   publishModlist().catch(() => {})
   return { blocked: [...blocked], muted: [...muted] }
 })
-ipcMain.handle('mute', async (_e, { key }) => {
+handle('mute', async (_e, { key }) => {
   muted.add(key); saveMod()
   // the compass learns a little "less of this" from what they wrote
   for (const a of [...discovered.values()].filter(a => a.author === key).slice(-5)) learn(a.text, -0.4)
   return { blocked: [...blocked], muted: [...muted] }
 })
-ipcMain.handle('unblock', async (_e, { key }) => { blocked.delete(key); saveMod(); publishModlist().catch(() => {}); return { blocked: [...blocked], muted: [...muted] } })
-ipcMain.handle('unmute', async (_e, { key }) => { muted.delete(key); saveMod(); return { blocked: [...blocked], muted: [...muted] } })
-ipcMain.handle('moderation', async () => ({ blocked: [...blocked], muted: [...muted] }))
+handle('unblock', async (_e, { key }) => { blocked.delete(key); saveMod(); publishModlist().catch(() => {}); return { blocked: [...blocked], muted: [...muted] } })
+handle('unmute', async (_e, { key }) => { muted.delete(key); saveMod(); return { blocked: [...blocked], muted: [...muted] } })
+handle('moderation', async () => ({ blocked: [...blocked], muted: [...muted] }))
 
 // ---- identity backup ----
 
-ipcMain.handle('export-identity', async () => {
+handle('export-identity', async (e) => {
+  if (e && e.web) throw new Error('only on the computer running Ember')
   const pk = store.primaryKey.toString('hex')
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
     title: 'Export Ember identity', defaultPath: 'ember-identity.txt',
@@ -1153,7 +1208,8 @@ ipcMain.handle('export-identity', async () => {
   return true
 })
 
-ipcMain.handle('restore-identity', async (_e, { primaryKey }) => {
+handle('restore-identity', async (e, { primaryKey } = {}) => {
+  if (e && e.web) throw new Error('only on the computer running Ember')
   if (!/^[0-9a-f]{64}$/.test((primaryKey || '').trim())) throw new Error('invalid key')
   // only allowed on a fresh identity (no posts yet) to avoid clobbering
   if (myCore.length > 1) return { ok: false, reason: 'not-fresh' }
@@ -1162,7 +1218,7 @@ ipcMain.handle('restore-identity', async (_e, { primaryKey }) => {
   return { ok: true }
 })
 
-ipcMain.handle('dm-send', async (_e, { to, text }) => {
+handle('dm-send', async (_e, { to, text }) => {
   if (!/^[0-9a-f]{64}$/.test(to) || !text || text.length > 450_000) throw new Error('bad dm')
   // authenticated key fetch: their DM key lives in their self-signed feed.
   // For strangers we must wait for the feed swarm to actually connect first.
@@ -1191,12 +1247,12 @@ ipcMain.handle('dm-send', async (_e, { to, text }) => {
   return { sent: sent > 0, queued: !sent }
 })
 
-ipcMain.handle('dm-open', async (_e, { key }) => {
+handle('dm-open', async (_e, { key }) => {
   dmSwarm.join(dm.inboxTopic(key), { server: true, client: true }) // pre-join so replies flow
   return dmConvos.get(key) || []
 })
 
-ipcMain.handle('dm-list', async () => {
+handle('dm-list', async () => {
   if (!engineUp) return []
   return [...dmConvos.entries()].map(([k, msgs]) => ({
     key: k, last: msgs[msgs.length - 1] || null, count: msgs.length,
@@ -1204,12 +1260,12 @@ ipcMain.handle('dm-list', async () => {
   })).sort((a, b) => ((b.last && b.last.ts) || 0) - ((a.last && a.last.ts) || 0))
 })
 
-ipcMain.handle('dm-accept', async (_e, { key }) => { dmAccepted.add(key); saveAccepted(); return true })
-ipcMain.handle('dm-ignore', async (_e, { key }) => { dmConvos.delete(key); saveDms(); return true })
+handle('dm-accept', async (_e, { key }) => { dmAccepted.add(key); saveAccepted(); return true })
+handle('dm-ignore', async (_e, { key }) => { dmConvos.delete(key); saveDms(); return true })
 
 // ---- saved posts ----
 
-ipcMain.handle('save-post', async (_e, { author, seq }) => {
+handle('save-post', async (_e, { author, seq }) => {
   const blk = await resolveBlock(author, seq)
   if (!blk || (blk.type !== 'post' && !blk.text)) throw new Error('cannot resolve post')
   // keep the author's signatures when we have them, so the copy we keep warm
@@ -1229,37 +1285,37 @@ ipcMain.handle('save-post', async (_e, { author, seq }) => {
   return [...saved.values()]
 })
 
-ipcMain.handle('unsave-post', async (_e, { author, seq }) => {
+handle('unsave-post', async (_e, { author, seq }) => {
   saved.delete(postId(author, seq)); saveSaved(); return [...saved.values()]
 })
 
-ipcMain.handle('saved-list', async () => engineUp ? [...saved.values()].sort((a, b) => b.ts - a.ts) : [])
+handle('saved-list', async () => engineUp ? [...saved.values()].sort((a, b) => b.ts - a.ts) : [])
 
 // ---- window controls (custom titlebar) ----
 
-ipcMain.handle('win-min', () => win.minimize())
-ipcMain.handle('win-max', () => win.isMaximized() ? win.unmaximize() : win.maximize())
-ipcMain.handle('win-close', () => win.close())   // intercepted: hides to tray
+handle('win-min', () => win.minimize())
+handle('win-max', () => win.isMaximized() ? win.unmaximize() : win.maximize())
+handle('win-close', () => win.close())   // intercepted: hides to tray
 // the page can't reload itself (navigation is locked); the language switch asks here
-ipcMain.handle('reload-ui', () => { if (win && !win.isDestroyed()) win.webContents.reload() })
+handle('reload-ui', () => { if (win && !win.isDestroyed()) win.webContents.reload() })
 
 // ---- notifications ----
 
-ipcMain.handle('notifs-list', async () => [...notifs].reverse())
-ipcMain.handle('notifs-unread', async () => {
+handle('notifs-list', async () => [...notifs].reverse())
+handle('notifs-unread', async () => {
   const u = { reply: 0, dm: 0, post: 0, total: 0 }
   if (!engineUp) return u
   for (const n of notifs) if (!n.read) { u[n.type] = (u[n.type] || 0) + 1; u.total++ }
   return u
 })
-ipcMain.handle('notifs-mark-read', async (_e, { type }) => {
+handle('notifs-mark-read', async (_e, { type }) => {
   for (const n of notifs) if (!type || n.type === type) n.read = true
   saveNotifs(); return true
 })
 
 // ---- settings ----
 
-ipcMain.handle('get-settings', async () => {
+handle('get-settings', async () => {
   if (!dataDir) return { ...SETTINGS, storageBytes: 0, savedCount: 0, cacheCount: 0 }
   let storage = 0
   try {
@@ -1271,7 +1327,7 @@ ipcMain.handle('get-settings', async () => {
   return { ...SETTINGS, storageBytes: storage, savedCount: saved.size, cacheCount: discovered.size }
 })
 
-ipcMain.handle('set-settings', async (_e, patch) => {
+handle('set-settings', async (_e, patch) => {
   const ok = {}
   if (typeof patch.theme === 'string' && ['paper','sepia','mist','carbon','slate','phosphor','ember'].includes(patch.theme)) ok.theme = patch.theme
   if (typeof patch.commons === 'boolean') ok.commons = patch.commons
@@ -1338,14 +1394,14 @@ async function setNearHidden (h) {
 
 const NEAR_OFF = { lan: { on: false }, area: { on: false }, radii: disc.AREA_RADII, people: [], hidden: false, saved: { lan: false, area: null } }
 const okCoords = (c) => c && Number.isFinite(c.lat) && Number.isFinite(c.lon) && Math.abs(c.lat) <= 90 && Math.abs(c.lon) <= 180
-ipcMain.handle('near-state', async () => nearState())
-ipcMain.handle('near-set-lan', async (_e, { on }) => {
+handle('near-state', async () => nearState())
+handle('near-set-lan', async (_e, { on }) => {
   if (!nearby) return NEAR_OFF
   SETTINGS.nearLan = on === true; saveSettings()
   await applyNearby()
   return nearState()
 })
-ipcMain.handle('near-set-area', async (_e, cfg) => {
+handle('near-set-area', async (_e, cfg) => {
   if (!nearby) return NEAR_OFF
   if (!(cfg && typeof cfg.place === 'string' && cfg.place.length <= 80 && okCoords(cfg))) {
     SETTINGS.nearArea = null
@@ -1359,7 +1415,7 @@ ipcMain.handle('near-set-area', async (_e, cfg) => {
 })
 // The PC's own location → nearest bundled town. The precise position never
 // leaves this function: not to the page, not to disk, not to the network.
-ipcMain.handle('near-locate', async (_e, { radius } = {}) => {
+handle('near-locate', async (_e, { radius } = {}) => {
   if (!nearby) return { error: 'booting', state: NEAR_OFF }
   const town = await locateTown()
   if (town.error) return { error: town.error, state: nearState() }
@@ -1368,8 +1424,8 @@ ipcMain.handle('near-locate', async (_e, { radius } = {}) => {
   saveSettings(); await applyNearby()
   return { town: { place: town.place, km: town.km }, state: nearState() }
 })
-ipcMain.handle('near-set-hidden', async (_e, { hidden }) => setNearHidden(hidden))
-ipcMain.handle('near-search', async (_e, { q }) => searchPlaces(typeof q === 'string' ? q.slice(0, 80) : ''))
+handle('near-set-hidden', async (_e, { hidden }) => setNearHidden(hidden))
+handle('near-search', async (_e, { q }) => searchPlaces(typeof q === 'string' ? q.slice(0, 80) : ''))
 
 // ---- taste: topics, compass, dial, languages (v2.8) ----
 
@@ -1384,8 +1440,8 @@ function tasteState () {
     suggest: SETTINGS.topicText ? taste.classify(SETTINGS.topicText, 3) : []
   }
 }
-ipcMain.handle('taste-state', async () => tasteState())
-ipcMain.handle('taste-set', async (_e, patch = {}) => {
+handle('taste-state', async () => tasteState())
+handle('taste-set', async (_e, patch = {}) => {
   const ids = new Set(taste.CATALOG.map(t => t.id))
   if (Array.isArray(patch.topics)) SETTINGS.topics = [...new Set(patch.topics.filter(id => ids.has(id)))].slice(0, 12)
   if (typeof patch.topicText === 'string') SETTINGS.topicText = patch.topicText.slice(0, 280)
@@ -1396,22 +1452,21 @@ ipcMain.handle('taste-set', async (_e, patch = {}) => {
   if (typeof patch.onboarded === 'boolean') SETTINGS.onboarded = patch.onboarded
   if (typeof patch.campfires === 'boolean') SETTINGS.campfires = patch.campfires
   saveSettings()
-  if (engineUp) { syncRooms(); broadcast('discover-updated') }
+  if (engineUp) syncRooms() // the page re-renders itself; this is not news
   return tasteState()
 })
-ipcMain.handle('taste-forget', async (_e, { term } = {}) => { if (tasteStore && typeof term === 'string') tasteStore.forget(term); if (engineUp) syncRooms(); return tasteState() })
-ipcMain.handle('taste-reset', async () => { if (tasteStore) tasteStore.reset(); if (engineUp) syncRooms(); return tasteState() })
-ipcMain.handle('not-interested', async (_e, { author, seq } = {}) => {
+handle('taste-forget', async (_e, { term } = {}) => { if (tasteStore && typeof term === 'string') tasteStore.forget(term); if (engineUp) syncRooms(); return tasteState() })
+handle('taste-reset', async () => { if (tasteStore) tasteStore.reset(); if (engineUp) syncRooms(); return tasteState() })
+handle('not-interested', async (_e, { author, seq } = {}) => {
   if (!P.HEX64.test(author || '') || !Number.isInteger(seq)) return false
   const id = postId(author, seq)
   const a = discovered.get(id)
   notInterested.add(id); saveNotInterested()
   if (a) learn(a.text, -1.0)
-  broadcast('discover-updated')
   return true
 })
 // interface translations: src/i18n/{fr,zh,ar}.json (English is the source text)
-ipcMain.handle('i18n', async (_e, { lang } = {}) => {
+handle('i18n', async (_e, { lang } = {}) => {
   if (!['fr', 'zh', 'ar'].includes(lang)) return null
   try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'i18n', lang + '.json'), 'utf8')) } catch { return null }
 })
@@ -1482,7 +1537,7 @@ async function refreshCircle () {
     for (const [k, n] of counts) { if (spare(k) || listHidden.has(k)) continue; (n >= 2 ? hard : soft).add(k) }
     circleHidden = hard; circleSoft = soft
     saveSettings()
-    broadcast('discover-updated'); broadcast('mod-updated', null)
+    broadcast('discover-updated', { fresh: false }); broadcast('mod-updated', null)
   } finally { circleBusy = false }
 }
 function modState () {
@@ -1492,8 +1547,8 @@ function modState () {
     blocked: blocked.size, listHidden: listHidden.size, circleHidden: circleHidden.size, circleSoft: circleSoft.size
   }
 }
-ipcMain.handle('mod-state', async () => modState())
-ipcMain.handle('mod-set', async (_e, patch = {}) => {
+handle('mod-state', async () => modState())
+handle('mod-set', async (_e, patch = {}) => {
   let republish = false
   if (typeof patch.publishBlocklist === 'boolean' && patch.publishBlocklist !== SETTINGS.publishBlocklist) { SETTINGS.publishBlocklist = patch.publishBlocklist; republish = true }
   if (typeof patch.circleSignals === 'boolean') SETTINGS.circleSignals = patch.circleSignals
@@ -1502,7 +1557,7 @@ ipcMain.handle('mod-set', async (_e, patch = {}) => {
   refreshCircle()
   return modState()
 })
-ipcMain.handle('mod-sub', async (_e, { key } = {}) => {
+handle('mod-sub', async (_e, { key } = {}) => {
   const k = P.cleanKey(key)
   if (!k) throw new Error('invalid key')
   if (k === hex(myCore.key)) throw new Error('that is your own key')
@@ -1510,7 +1565,7 @@ ipcMain.handle('mod-sub', async (_e, { key } = {}) => {
   saveSettings(); await refreshCircle()
   return modState()
 })
-ipcMain.handle('mod-unsub', async (_e, { key } = {}) => {
+handle('mod-unsub', async (_e, { key } = {}) => {
   SETTINGS.modSubs = SETTINGS.modSubs.filter(s => s.key !== key)
   saveSettings(); await refreshCircle()
   return modState()
@@ -1541,15 +1596,64 @@ function startFires () {
   })
   for (const s of gossipPeers) fires.attach(s)
 }
-ipcMain.handle('fires-list', async () => ({ on: SETTINGS.campfires !== false, fires: fires ? fires.list() : [] }))
-ipcMain.handle('fire-messages', async (_e, { fire } = {}) => fires ? fires.messages(fire) : [])
-ipcMain.handle('fire-send', async (_e, { fire, text } = {}) => {
+handle('fires-list', async () => ({ on: SETTINGS.campfires !== false, fires: fires ? fires.list() : [] }))
+handle('fire-messages', async (_e, { fire } = {}) => fires ? fires.messages(fire) : [])
+handle('fire-send', async (_e, { fire, text } = {}) => {
   if (!fires) throw new Error('booting')
   const m = fires.send(fire, text)
   return m ? { ok: true } : { ok: false }
 })
 
-ipcMain.handle('clear-cache', async () => {
+// ---- web access (v2.9) ----
+
+function webCall (ch, args, ctx) {
+  const fn = HANDLERS.get(ch)
+  if (!fn) { const e = new Error('unknown call'); e.code = 'UNKNOWN_CHANNEL'; throw e }
+  return fn({ web: true, session: ctx.session }, args)
+}
+function webState (e) {
+  const st = web ? web.state() : { on: false, urls: [], devices: [], code: null }
+  return { ...st, headless: HEADLESS, saved: SETTINGS.web, current: e && e.web ? e.session.id : null }
+}
+function webAnnounce (what) {
+  broadcast('web-updated', { what })
+  // headless: the console is where the operator reads the pairing code
+  if (HEADLESS && web && web.server && what === 'code') {
+    console.log(`\n  Pairing code: ${web.code.slice(0, 4)} ${web.code.slice(4)}   (single use; enter it at ${web.urls().join(' or ')})\n`)
+  }
+}
+async function startWeb (opts) {
+  if (!web) web = new Web({ dataDir, srcDir: __dirname, call: webCall, onChange: webAnnounce, codeTtl: HEADLESS ? Infinity : undefined })
+  await web.start(opts)
+  return web.state()
+}
+async function applyWeb () {
+  if (HEADLESS) return
+  const w = SETTINGS.web
+  if (!w.on) { if (web) { await web.stop(); webAnnounce('state') } return }
+  await startWeb({ port: w.port, host: w.lan ? '0.0.0.0' : '127.0.0.1' })
+}
+handle('web-state', async (e) => webState(e))
+handle('web-set', async (e, patch = {}) => {
+  if (e && e.web) throw new Error('only on the computer running Ember')
+  const w = SETTINGS.web
+  if (typeof patch.on === 'boolean') w.on = patch.on
+  if (typeof patch.lan === 'boolean') w.lan = patch.lan
+  if (Number.isInteger(patch.port) && patch.port >= 1024 && patch.port <= 65535) w.port = patch.port
+  saveSettings(); await applyWeb()
+  return webState(e)
+})
+handle('web-new-code', async (e) => { if (web && web.server) web.rotate(); return webState(e) })
+handle('web-revoke', async (e, { id } = {}) => { if (web) web.revoke(id); return webState(e) })
+handle('web-open', async (e) => {
+  if (e && e.web) throw new Error('only on the computer running Ember')
+  if (!web || !web.server) return false
+  // the code rides in the URL fragment: it never reaches a server log or a proxy
+  require('electron').shell.openExternal(`${web.urls()[0]}/#code=${web.currentCode()}`)
+  return true
+})
+
+handle('clear-cache', async () => {
   discovered.clear(); saveCache(); return true
 })
 
@@ -1617,7 +1721,32 @@ function createWindow () {
   })
 }
 
+async function startHeadless () {
+  const opt = host.options
+  dataDir = path.join(app.getPath('userData'), 'ember-data')
+  fs.mkdirSync(dataDir, { recursive: true })
+  loadSettings()
+  if (opt.restoreKey) {
+    if (!/^[0-9a-f]{64}$/.test(opt.restoreKey)) { console.error('--restore needs the 64-character primary key'); process.exit(1) }
+    if (fs.existsSync(path.join(dataDir, 'CORESTORE'))) { console.error(`--restore only works on an empty data folder (${dataDir})`); process.exit(1) }
+    fs.writeFileSync(path.join(dataDir, 'RESTORE_KEY'), opt.restoreKey)
+  }
+  try { await startEngine() } catch (e) { console.error('Ember failed to start:', (e && e.stack) || e); process.exit(1) }
+  engineUp = true
+  if (opt.exportIdentity) {
+    console.log(['EMBER IDENTITY BACKUP: KEEP THIS SECRET. Anyone with it IS you on the network.', '',
+      'PRIMARY KEY: ' + store.primaryKey.toString('hex'), 'PUBLIC KEY : ' + hex(myCore.key), '',
+      'Restore on a new server: npm run serve -- --data <empty folder> --restore <PRIMARY KEY>'].join('\n'))
+    app.quit(); return
+  }
+  console.log(`\n  EMBER is running headless.  Data: ${dataDir}\n  Key:  ${hex(myCore.key)}`)
+  await startWeb({ port: opt.port, host: opt.host, allowHosts: opt.allowHosts })
+  if (!web.server) { console.error('  Web interface could not start: ' + web.error); process.exit(1) }
+  if (opt.host === '0.0.0.0' || opt.host === '::') console.log('  Listening on every network interface over plain HTTP: put it behind HTTPS before exposing it to the internet.')
+}
+
 app.whenReady().then(async () => {
+  if (HEADLESS) return startHeadless()
   // settings before the window, so the page knows its language at first paint
   try { dataDir = path.join(app.getPath('userData'), 'ember-data'); fs.mkdirSync(dataDir, { recursive: true }); loadSettings() } catch {}
   // window first: boot must never be able to leave the user staring at nothing
@@ -1626,6 +1755,7 @@ app.whenReady().then(async () => {
     await startEngine()
     engineUp = true
     broadcast('engine-ready', true)
+    applyWeb().catch(() => {})
   } catch (e) {
     dialog.showErrorBox('Ember failed to start',
       String((e && e.stack) || e) + '\n\nYour data is untouched. Send this to the developer.')
@@ -1635,5 +1765,5 @@ app.on('before-quit', () => { quitting = true })
 app.on('window-all-closed', () => { /* stay alive in tray; engine keeps broadcasting */ })
 app.on('quit', async () => {
   saveCache(); saveDms(); saveSaved(); saveSettings(); saveNotifs(); saveAccepted(); saveMod(); saveOutbox()
-  try { if (nearby) await nearby.destroy(); await feedSwarm.destroy(); await gossipSwarm.destroy(); await dmSwarm.destroy() } catch {}
+  try { if (web) await web.stop(); if (nearby) await nearby.destroy(); await feedSwarm.destroy(); await gossipSwarm.destroy(); await dmSwarm.destroy() } catch {}
 })

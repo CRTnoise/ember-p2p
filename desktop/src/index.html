@@ -638,6 +638,52 @@
   html[dir=rtl] .prox,html[dir=rtl] .netstat{margin-left:0;margin-right:auto}
   html[dir=rtl] .netstat{text-align:left}
 
+  /* ============ v2.9: in a browser ============ */
+  html.web .winctl{display:none}
+  html.web .titlebar,html.web .tblogo,html.web .winctl{-webkit-app-region:no-drag}
+  .offlinebar{display:none;position:fixed;top:0;left:0;right:0;z-index:95;background:var(--accent);color:var(--inv);
+              font:600 10px/1 var(--mono);letter-spacing:.14em;text-align:center;padding:7px}
+  html.offline .offlinebar{display:block}
+  .webcode{font:700 26px/1 var(--mono);letter-spacing:.24em;color:var(--ink);margin:8px 0 4px;user-select:all}
+  .weburl{font:500 12px/1.8 var(--mono);color:var(--ink);word-break:break-all}
+  .devrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed color-mix(in srgb,var(--line) 30%,transparent);font:400 11px/1.4 var(--mono);color:var(--muted)}
+  .devrow b{color:var(--ink);font-weight:600}
+  .devrow .btn{margin-inline-start:auto;height:24px;font-size:9px}
+  .narrow-only{display:none!important}
+  /* phones and narrow windows: one column, navigation at the bottom */
+  @media (max-width: 760px){
+    body{padding:0}
+    .app{border:0;box-shadow:none}
+    .tbtitle{visibility:hidden}
+    .top{gap:8px;padding:0 8px}
+    .top .netstat{display:none}
+    .top .search{max-width:none}
+    #followTop{padding:0 8px}
+    #focusCompose{padding:0 8px}
+    .frame{padding-bottom:54px}
+    .rail{position:fixed;left:0;right:0;bottom:0;width:auto;height:54px;flex-direction:row;padding:0;border-right:0;
+          border-top:1px solid var(--line);background:var(--paper);z-index:40}
+    .nav{flex-direction:row;justify-content:space-around;gap:0}
+    .nav button{flex:1 1 0;width:auto;min-width:0;justify-content:center;height:54px;padding:0}
+    .nav button .ic{margin:0;width:auto}
+    .nav button .lb{display:none}
+    .narrow-only{display:flex!important}
+    .railfoot{display:none}
+    .stories,.inboxrail{display:none!important}
+    .card{margin:0 8px 14px}
+    .cardactions{flex-wrap:wrap}
+    .cardactions .btn{white-space:nowrap}
+    .composerow{flex-wrap:wrap}
+    .dmwrap.open{flex-direction:column}
+    .dmlist{width:auto;max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}
+    .setrow{flex-wrap:wrap;padding:14px 16px}
+    .setrow .sl{flex:1 1 220px}
+    .setrow.col .sl{flex:none}
+    .themes{flex-wrap:wrap}
+    .placebox input{width:100%}
+    .ptabs{overflow-x:auto}
+  }
+
   .toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--inv);
          font:500 11px/1 var(--mono);letter-spacing:.1em;padding:9px 14px;opacity:0;pointer-events:none;
          transition:opacity var(--dur) var(--ease-out),transform var(--dur) var(--ease-out)}
@@ -676,6 +722,7 @@
         <button id="nav-notifs" onclick="go('notifs')"><span class="ic">◈</span><span class="lb">NOTIFS</span><span class="dot" id="dot-notifs"></span></button>
         <button id="nav-saved" onclick="go('saved')"><span class="ic">◆</span><span class="lb">SAVED</span></button>
         <button id="nav-profile" onclick="openProfile(ME.key)"><span class="ic">◍</span><span class="lb">PROFILE</span></button>
+        <button id="nav-inbox" class="narrow-only" onclick="go('inbox')"><span class="ic">✉</span><span class="lb">INBOX</span></button>
         <button id="nav-settings" onclick="go('settings')"><span class="ic">⚙</span><span class="lb">SETUP</span></button>
       </div>
       <div class="railfoot">
@@ -886,9 +933,11 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="offlinebar">LOST CONTACT WITH EMBER · RECONNECTING…</div>
 
 <script>
 const $ = s => document.querySelector(s)
+if (window.EMBER_WEB) document.documentElement.classList.add('web')
 let ME = null, VIEW = 'feed'
 let DATA = { items: [], profiles: {}, follows: [], replyCounts: {} }
 let DISC = { items: [] }
@@ -1104,7 +1153,7 @@ function guessLang () { const n = (navigator.language || 'en').slice(0, 2).toLow
 
 function go (view) {
   VIEW = view
-  for (const v of ['feed','discover','nearby','fires','notifs','saved','profile','settings']) {
+  for (const v of ['feed','discover','nearby','fires','notifs','saved','profile','settings','inbox']) {
     const b = $('#nav-'+v); if (b) b.classList.toggle('on', v===view)
   }
   $('#ppage').classList.toggle('open', view==='profile')
@@ -1177,7 +1226,7 @@ function card (it, opts = {}) {
     }
     if (it.videoMeta) {
       inner += `<div class="vidwrap" data-video="${attr(JSON.stringify({a:it.author,m:it.videoMeta}))}">
-          <img class="postimg thumb" ${it.thumb?`src="${safeSrc(it.thumb)}"`:''} alt="video preview">
+          <img class="postimg thumb" ${it.thumb?`src="${safeSrc(it.thumb)}" alt="video preview"`:'alt=""'}>
           <div class="vbadge"><span>▶ VIDEO · ${(it.videoMeta.size/1048576).toFixed(1)}MB</span></div>
         </div>
         <div class="vprog"><i></i></div>
@@ -1486,6 +1535,7 @@ const DIAL = ['FAMILIAR', '·', '··', 'STRANGE']
 async function renderDiscover () {
   const q = $('#search').value.trim()
   DISC = await window.ember.discover(q)
+  PENDING.discover = 0; DISC_PENDING.clear(); updatePill()
   NET.buckets = DISC.buckets; NET.gossip = DISC.gossipPeers; netRender()
   const feed = $('#feed'); feed.innerHTML=''
   const l=document.createElement('div'); l.className='daylabel'
@@ -1994,6 +2044,8 @@ async function renderSettings () {
       <div class="sd">everyone on a list you subscribe to is hidden for you, and their posts stop travelling through you. Nothing is ever deleted or enforced on anyone else.</div></div>
       <div class="rowline"><input class="field" id="m-subkey" placeholder="paste the key of someone whose blocklist you trust"><button class="btn" id="m-subbtn">SUBSCRIBE</button></div>
       <div id="m-subs" style="margin-top:10px"></div></div>
+    <div class="sethead">WEB ACCESS</div>
+    <div id="webbox"></div>
     <div class="sethead">GENERAL</div>
     <div class="setrow"><div class="sl"><div class="st">THEME</div>
       <div class="sd">each palette designed as tonal variants, contrast-checked — never inverted</div></div>
@@ -2013,8 +2065,8 @@ async function renderSettings () {
       <button class="btn" id="s-clearcache">CLEAR GOSSIP CACHE</button></div>
     <div class="setrow"><div class="sl"><div class="st">IDENTITY BACKUP</div>
       <div class="sd">export your primary key to a file. anyone with it IS you — store it like a password. restore only works on a fresh install.</div></div>
-      <button class="btn solid" id="s-export">EXPORT</button>
-      <button class="btn" id="s-restore">RESTORE</button>
+      ${window.EMBER_WEB ? '<span class="sd">only on the computer running Ember</span>' : `<button class="btn solid" id="s-export">EXPORT</button>
+      <button class="btn" id="s-restore">RESTORE</button>`}
       <button class="btn" id="s-copykey">COPY PUBLIC KEY</button></div>
     <div class="setrow"><div class="sl"><div class="st">BLOCKED &amp; MUTED</div>
       <div class="sd" id="modlist">loading…</div></div></div>`
@@ -2031,6 +2083,7 @@ async function renderSettings () {
   } }
   bind('s-commons','commons'); bind('s-dm','keepDmHistory'); bind('s-auto','autostart')
   wireTasteSettings(page)
+  renderWebAccess()
   document.getElementById('s-tailset').onclick = async () => {
     await window.ember.setSettings({ tailWindow: parseInt(document.getElementById('s-tail').value)||150 })
     toast('TAIL WINDOW SET')
@@ -2041,11 +2094,11 @@ async function renderSettings () {
     const el = document.getElementById('warmstat')
     if (el) el.textContent = `warm cache ${(w.bytes/1048576).toFixed(1)}/${(w.budget/1048576)|0} MB (${w.items} watched media)`
   })
-  document.getElementById('s-export').onclick = async () => {
+  if (!window.EMBER_WEB) document.getElementById('s-export').onclick = async () => {
     const ok = await window.ember.exportIdentity()
     toast(ok ? 'IDENTITY EXPORTED — GUARD THAT FILE' : 'EXPORT CANCELLED')
   }
-  document.getElementById('s-restore').onclick = async () => {
+  if (!window.EMBER_WEB) document.getElementById('s-restore').onclick = async () => {
     const k = prompt(tr('Paste the 64-char PRIMARY KEY from your backup file. Only works before this identity has posted anything.'))
     if (!k) return
     try {
@@ -2122,6 +2175,53 @@ function wireTasteSettings (page) {
   }
   window.ember.modState().then(drawMod)
 }
+
+/* ============ WEB ACCESS ============ */
+async function renderWebAccess () {
+  const box = $('#webbox'); if (!box) return
+  let st
+  try { st = await window.ember.webState() } catch { box.innerHTML = ''; return }
+  const sw = (id, on, dis) => `<div class="switch ${on ? 'on' : ''}" id="${id}" ${dis ? 'style="opacity:.4;pointer-events:none"' : ''}><div class="knob"></div></div>`
+  const inBrowser = !!window.EMBER_WEB
+  const code = st.code ? `${st.code.slice(0, 4)} ${st.code.slice(4)}` : ''
+  const mins = st.codeExpires ? Math.max(1, Math.round((st.codeExpires - Date.now()) / 60000)) : null
+  let h = ''
+  if (inBrowser) {
+    h += `<div class="setrow"><div class="sl"><div class="st">YOU'RE USING EMBER IN A BROWSER</div>
+      <div class="sd">this page is a window onto the Ember node that serves it. Turning web access on or off, and the identity backup, happen on the computer running Ember.</div></div>
+      <button class="btn" id="w-logout">SIGN OUT</button></div>`
+  } else {
+    h += `<div class="setrow"><div class="sl"><div class="st">USE EMBER IN A BROWSER</div>
+      <div class="sd">serve this interface to web browsers. Each browser must be paired once with a code shown here, and you can sign any of them out below.</div>
+      ${st.error ? `<div class="sd nearerr">${esc(st.error)}</div>` : ''}</div>${sw('w-on', st.saved && st.saved.on)}</div>
+    <div class="setrow"><div class="sl"><div class="st">OTHER DEVICES ON MY NETWORK</div>
+      <div class="sd">let phones and laptops on the same Wi-Fi open it too. It's plain HTTP: anyone on that network can watch the traffic, so don't turn this on on public Wi-Fi.</div></div>${sw('w-lan', st.saved && st.saved.lan, !(st.saved && st.saved.on))}</div>`
+  }
+  if (st.on) {
+    h += `<div class="setrow col"><div class="sl"><div class="st">ADDRESS</div>
+      ${st.urls.map(u => `<div class="weburl" data-noi18n>${esc(u)}</div>`).join('')}</div></div>
+    <div class="setrow col"><div class="sl"><div class="st">PAIRING CODE</div>
+      <div class="sd">${st.locked ? 'pairing is paused for a few minutes after too many wrong codes.' : 'enter it in the browser you want to pair. Each code works once.'}${mins ? ` <span>${mins === 1 ? 'Expires in 1 min.' : `Expires in ${mins} min.`}</span>` : ''}</div>
+      <div class="webcode" data-noi18n>${esc(code)}</div>
+      <div class="rowline"><button class="btn" id="w-code">NEW CODE</button>${inBrowser ? '' : '<button class="btn solid" id="w-open">OPEN IN BROWSER</button>'}</div></div></div>
+    <div class="setrow col"><div class="sl"><div class="st">PAIRED BROWSERS</div>
+      ${st.devices.length ? st.devices.slice().reverse().map(d => `<div class="devrow"><b data-noi18n>${esc(d.label)}</b><span>${d.id === st.current ? 'THIS BROWSER' : `last seen ${ago(d.lastSeen || d.created)}`}</span><button class="btn" data-rev="${attr(d.id)}">SIGN OUT</button></div>`).join('')
+        : '<div class="sd">no browser paired yet.</div>'}</div></div>`
+  }
+  box.innerHTML = h
+  const b = (id, fn) => { const el = $('#' + id); if (el) el.onclick = fn }
+  b('w-on', async (e) => { const on = !e.currentTarget.classList.contains('on'); await window.ember.webSet({ on }); toast(on ? 'WEB ACCESS ON' : 'WEB ACCESS OFF'); renderWebAccess() })
+  b('w-lan', async (e) => { const lan = !e.currentTarget.classList.contains('on'); await window.ember.webSet({ lan }); renderWebAccess() })
+  b('w-code', async () => { await window.ember.webNewCode(); renderWebAccess() })
+  b('w-open', async () => { await window.ember.webOpen() })
+  b('w-logout', async () => { if (confirm(tr('Sign this browser out? You will need a new pairing code to come back.'))) window.ember.webLogout() })
+  box.querySelectorAll('[data-rev]').forEach(x => x.onclick = async () => {
+    if (x.dataset.rev === st.current && !confirm(tr('Sign this browser out? You will need a new pairing code to come back.'))) return
+    await window.ember.webRevoke(x.dataset.rev)
+    if (x.dataset.rev === st.current) location.reload(); else renderWebAccess()
+  })
+}
+window.ember.onWebUpdated && window.ember.onWebUpdated(() => { if (VIEW === 'settings') renderWebAccess() })
 
 /* ============ CAMPFIRES ============ */
 let FIRE_ACTIVE = null
@@ -2307,7 +2407,7 @@ async function refresh () {
 
 /* ============ CALM FEED ============ */
 
-function bumpPending (kind) { PENDING[kind]++; updatePill(); refreshUnread() }
+function bumpPending (kind, n = 1) { PENDING[kind] += n; updatePill(); refreshUnread() }
 function updatePill () {
   const n = VIEW==='discover' ? PENDING.discover : VIEW==='feed' ? PENDING.feed : 0
   const pill = $('#pill')
@@ -2678,15 +2778,21 @@ $('#search').addEventListener('input', () => {
 $('#dmsend').onclick = sendDm
 $('#dmtext').addEventListener('keydown', e => { if (e.key==='Enter') sendDm() })
 
-window.ember.onFeedUpdated(() => {
-  if (Date.now() - OWN_ACTION < 2000) { refresh(); return }
+// The pill counts posts that really arrived. Your own actions, profile edits,
+// follows, video chunks, re-ranking (the dial, topics, blocklists) are not news.
+window.ember.onFeedUpdated((ev) => {
+  ev = ev || {}
+  if (ev.own || Date.now() - OWN_ACTION < 2000) { refresh(); return }
+  if (ev.removed) return
   if (FIRST_LOAD || VIEW!=='feed') { refresh(); return }
-  bumpPending('feed')
+  if (ev.posts > 0) bumpPending('feed', ev.posts)
 })
-window.ember.onDiscoverUpdated(() => {
+const DISC_PENDING = new Set()
+window.ember.onDiscoverUpdated((ev) => {
   if (VIEW!=='discover') return
   if (!DISC.items.length) { renderDiscover(); return }
-  bumpPending('discover')
+  if (!ev || !ev.fresh || DISC_PENDING.has(ev.id) || DISC.items.some(i => i.author + ':' + i.seq === ev.id)) return
+  DISC_PENDING.add(ev.id); bumpPending('discover')
 })
 window.ember.onRepliesUpdated(id => {
   const [a, s] = id.split(':')

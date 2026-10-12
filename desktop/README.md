@@ -11,11 +11,60 @@ npm start
 Windows will ask for network access on first launch: allow **private and
 public** networks, or the DHT can't hole-punch and you'll see 0 peers.
 
+## Self-hosting
+Ember can run with no window, under plain Node 20+ (no Electron), and be used
+from any browser:
+```bash
+npm ci --omit=dev          # no Electron, no build tools
+npm run serve              # = node src/main.js
+```
+It prints the node's key and an 8-digit **pairing code**. Open the address it
+prints, enter the code, and that browser is paired (to pair another browser,
+use SETUP › WEB ACCESS › NEW CODE in one that's already paired; the server also
+prints each new code).
+
+| option | default | |
+|---|---|---|
+| `--data DIR` | `~/.ember` | where the identity and data live (`EMBER_DATA`) |
+| `--port N` | `7777` | (`EMBER_PORT`) |
+| `--host H` | `127.0.0.1` | `0.0.0.0` to listen on every interface (`EMBER_HOST`) |
+| `--allow-host NAME` | | extra host names to answer to, e.g. your domain behind a proxy (`EMBER_ALLOW_HOSTS`, comma-separated) |
+| `--export-identity` | | print the primary key (back it up!) and exit |
+| `--restore KEY` | | start an empty data folder as an existing identity; the log downloads from your followers |
+
+The web interface speaks plain HTTP. On anything but localhost or your own
+Wi-Fi, put it behind HTTPS, for example with Caddy:
+```
+ember.example.org {
+  reverse_proxy 127.0.0.1:7777
+}
+```
+and start Ember with `--allow-host ember.example.org`. Or reach it privately
+over Tailscale/WireGuard. A systemd unit:
+```ini
+[Unit]
+Description=Ember node
+After=network-online.target
+[Service]
+WorkingDirectory=/opt/ember/desktop
+ExecStart=/usr/bin/node src/main.js --data /var/lib/ember --allow-host ember.example.org
+Restart=on-failure
+User=ember
+[Install]
+WantedBy=multi-user.target
+```
+`journalctl -u ember` shows the pairing codes. One identity per data folder:
+don't run the desktop app and a server on the same identity at the same time
+unless the second is a restore you're migrating to.
+
+On the desktop app, the same interface is in SETUP › WEB ACCESS: off by
+default, localhost only unless you allow other devices on your network.
+
 ## Test
 ```bash
-npm test                    # protocol (sanitizer, signatures, DM proof, deletes, nearby), taste (topics, compass, dial), campfires
+npm test                    # protocol (sanitizer, signatures, DM proof, deletes, nearby), taste (topics, compass, dial), campfires, web access
 npm run test:nearby         # SAME AREA end to end over a private local DHT (three peers)
-npx electron test/ui/run.js # UI suite: clicks through the real interface (71 cases)
+npx electron test/ui/run.js # UI suite: clicks through the real interface (82 cases)
 ```
 
 ## Build
@@ -52,6 +101,9 @@ download the files from the run's artifacts.
 | `src/topics.json` | the topic catalog: ids, labels and seed words in four languages |
 | `src/fires.js` | CAMPFIRES: live rooms over gossip connections, signed, memory-only |
 | `src/i18n/*.json` | interface translations (English is the source text) |
+| `src/web.js` | WEB ACCESS: serves the interface to paired browsers (pairing, sessions, guards, events, uploads) |
+| `src/web-shim.js` | `window.ember` for a browser: the preload API over HTTP + server-sent events |
+| `src/headless.js` | stands in for Electron when Ember runs under plain Node (`npm run serve`) |
 | `src/places.tsv` | offline town list for SAME AREA (GeoNames, CC BY 4.0; `tools/build-places.js`) |
 | `src/dm.js` | E2E DM crypto (shared with mobile) |
 | `src/preload.js` | the only API the page can call |

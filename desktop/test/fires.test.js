@@ -60,5 +60,23 @@ const tick = () => new Promise(r => setTimeout(r, 20))
   ok(after.people === 2 && !after.lit, 'fire still lit after C left: ' + JSON.stringify(after))
   ok(A.f.messages('pixel').length === 0, 'messages outlived the fire')
 
+  // decoys: E sits silently at 'film' (a decoy), F and G really picked it
+  const E = person('eve'), F = person('fox'), G = person('gus')
+  const said = []
+  E.f.setMine(['pixel'], ['film', 'pixel']); F.f.setMine(['film']); G.f.setMine(['film'])
+  const sockE = { write: (l) => said.push(JSON.parse(l)) }; E.f.attach(sockE)
+  const decl = said.find(m => m.t === 'fire-here')
+  ok(decl && decl.fires.join() === 'film,pixel', 'decoys not declared, or declared in a telling order: ' + JSON.stringify(decl && decl.fires))
+  E.f.detach(sockE)
+  link(E, F); link(E, G); await tick() // F and G only meet through E
+  const ff = F.f.list().find(x => x.fire === 'film')
+  ok(ff.people === 2, 'F does not count E at the film fire: ' + JSON.stringify(ff))
+  ok(!E.f.list().some(x => x.fire === 'film'), 'a decoy fire shows up in the list')
+  let threw = false; try { E.f.send('film', 'x') } catch { threw = true }
+  ok(threw, 'could speak at a decoy fire')
+  F.f.send('film', 'anyone seen the new restoration?'); await tick()
+  ok(G.f.messages('film').some(m => m.text.includes('restoration')), 'a decoy listener does not relay')
+  ok(E.f.messages('film').length === 0, 'a decoy listener keeps messages')
+
   console.log(`${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0)
 })()

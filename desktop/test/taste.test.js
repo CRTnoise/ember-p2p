@@ -74,10 +74,22 @@ const items = [
   { text: 'linocut printmaking poster', ts: now },
   { text: 'football league match goal', ts: now }
 ]
-const fam = taste.rank(items, vec, 0, now), str = taste.rank(items, vec, 3, now)
-ok(fam[0].text.includes('risograph'), 'FAMILIAR does not lead with the closest post')
-ok(str[0].text.includes('football'), 'STRANGE does not lead with the furthest post')
-ok(taste.rank(items, null, 1, now).length === 3, 'rank without compass dropped posts')
+// the dial picks the band; inside it, newest first
+const close = ['risograph print zine two colours', 'riso zine print shop', 'zine risograph colours print', 'linocut printmaking poster', 'printmaking ink poster', 'two colour print poster']
+const far = ['football league match goal', 'tax return deadline form', 'kubernetes cluster upgrade', 'marathon training plan', 'stock market quarterly', 'volcano eruption iceland']
+const pool = [...close, ...far].map((text, i) => ({ text, ts: now - i * 3600_000 }))
+const fam = taste.rank(pool, vec, 0), str = taste.rank(pool, vec, 3)
+const isClose = (a) => close.includes(a.text)
+ok(fam.length >= 4 && fam.filter(isClose).length >= fam.length - 1, 'FAMILIAR is not mostly close posts: ' + fam.map(a => a.text.slice(0, 12)))
+ok(str.length >= 4 && str.filter(a => !isClose(a)).length >= str.length - 1, 'STRANGE is not mostly far posts: ' + str.map(a => a.text.slice(0, 12)))
+for (const [name, list] of [['FAMILIAR', fam], ['STRANGE', str], ['step 1', taste.rank(pool, vec, 1)], ['step 2', taste.rank(pool, vec, 2)]]) {
+  ok(list.every((a, i) => i === 0 || list[i - 1].ts >= a.ts), name + ' is not newest-first')
+}
+ok(taste.rank(pool, vec, 1).length > fam.length && taste.rank(pool, vec, 2).length > str.length, 'middle steps are not wider')
+ok(taste.rank(items, vec, 0).length === 3, 'a tiny network hides posts')
+ok(taste.rank(items, null, 1).length === 3 && taste.rank(items, null, 1).every((a, i, l) => i === 0 || l[i - 1].ts >= a.ts), 'no compass: not everything newest-first')
+const damped = taste.rank(pool, vec, 0, (a) => a.text === close[0] ? 0.01 : 1)
+ok(!damped.some(a => a.text === close[0]), 'a ranked-down post stays in FAMILIAR')
 
 // ---- why am I seeing this ----
 const ctx = { query: '', follows: new Set(['f'.repeat(64)]), topics: ['art'], terms: ['riso', 'zine'] }

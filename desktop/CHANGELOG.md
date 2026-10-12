@@ -1,5 +1,60 @@
 # Changelog
 
+## v2.9.0 — Ember in a browser, and self-hosted
+- **Use Ember in a browser.** SETUP › WEB ACCESS serves the same interface to
+  web browsers. Every browser pairs once with an 8-digit code (OPEN IN BROWSER
+  pairs this computer's browser in one click). Paired browsers are listed in
+  SETUP and can be signed out one by one. It's the same node and the same
+  identity: the browser is a window onto it, not another account.
+- **Phones on your Wi-Fi.** OTHER DEVICES ON MY NETWORK lets phones and laptops
+  on the same network open it. The interface now fits a phone: one column,
+  navigation at the bottom, an INBOX button.
+- **Self-hosted.** `npm run serve` runs Ember with no window at all, under plain
+  Node (no Electron needed: `npm ci --omit=dev`), on a home server, a Raspberry
+  Pi or a VPS that stays online. It prints its key and a pairing code; you use it
+  from any browser. Options: `--port`, `--host`, `--allow-host` (for a domain
+  behind a reverse proxy), `--data`, `--export-identity` and `--restore <key>`.
+  Because it's always on, a self-hosted node also keeps your posts and your
+  friends' posts warm while your other devices sleep.
+- **Built to be exposed carefully.** Localhost only by default. Pairing codes
+  are single-use, 5 wrong codes lock pairing for 5 minutes, and sessions are
+  HttpOnly + SameSite=Strict cookies stored hashed. Every request must name a
+  host this node answers to (DNS-rebinding guard) and come from the page itself
+  (Origin, JSON only), so other websites can't act through your browser. A
+  browser can never export or restore the identity, or switch web access off.
+  Videos picked in a browser are uploaded, transcoded on the node, then deleted.
+  Live updates (new posts, replies, DMs, campfires) stream to the browser.
+- Tests: 43 web checks (pairing, lockout, guards, CSRF, uploads, events, and that
+  the browser API matches the window's), 82 UI cases (5 new), and an end-to-end
+  run where a real browser uses a headless node that talks to a desktop node
+  (posting, following, replies, encrypted DMs, a video upload, a phone pairing
+  and being signed out, a hostile page trying to post through the browser).
+
+## v2.8.1 — Discover fixes
+- **No more phantom "NEW POSTS".** Turning the FAMILIAR ↔ STRANGE dial (or
+  changing topics, or a blocklist refreshing) bumped the reload pill every
+  time, with no post arriving. Profile edits, follows and video chunks from
+  people you follow did the same on the Feed. The pill now counts only posts
+  that really arrived, each once, and not ones already on screen.
+- **Discover stays newest-first.** The dial now chooses *which* posts you see
+  (the closest 40 % of what reached you, the closest 70 %, the furthest 70 %,
+  the furthest 40 %), and inside that band the newest post is at the top. The
+  Feed was already, and still is, the people you follow in the order they
+  posted.
+- **Discover is fast again.** It re-measured every cached post on each render:
+  with a full cache (5,000 posts) that froze Ember for about 5 seconds,
+  network included. Each post is now measured once, when it arrives: about
+  20 ms per render.
+- **Decoys cover campfires too.** Campfire presence was announced with your
+  real topics only, which gave them away and defeated the decoy rooms. You now
+  also sit silently at your decoy fires (relaying, never shown or speaking).
+- Searching no longer piles up swarm topics: only the last few searches' buckets
+  are kept. A bucket shared by two features can't be dropped by one of them.
+- When another install of your identity writes (the old PC still running after
+  a restore), this one now keeps a copy, so your own profile shows those posts.
+- Tests: 174 taste checks (the dial bands, newest-first), 17 campfire checks
+  (decoy fires), 77 UI cases (6 new for the reload pill).
+
 ## v2.8.0 — Topics, compass, campfires, four languages
 - **Ember speaks French, Chinese and Arabic.** A language picker opens the
   first launch (and lives in SETUP): it sets the interface language *and* the

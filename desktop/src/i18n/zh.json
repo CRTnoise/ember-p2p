@@ -337,7 +337,30 @@
   "YOU'RE IN.": "你进来了。",
   "Post something — it lands in meaning-buckets where nearby strangers drift. Follow a friend's key to sync their feed and start keeping it warm. Close the window and Ember keeps seeding from the tray. The network is only as alive as the people holding it.": "发点什么 — 它会落入语义桶，附近的陌生人在那里漂流。关注朋友的密钥来同步他们的动态，并开始为它保温。关掉窗口，Ember 会在托盘里继续做种。网络的生命力，全靠守着它的人。",
   "ENTER THE SWARM ◆": "进入网络 ◆",
-  "▤ POST": "▤ 帖子"
+  "▤ POST": "▤ 帖子",
+  "WEB ACCESS": "网页访问",
+  "USE EMBER IN A BROWSER": "在浏览器中使用 Ember",
+  "serve this interface to web browsers. Each browser must be paired once with a code shown here, and you can sign any of them out below.": "把这个界面提供给网页浏览器。每个浏览器都需要用这里显示的代码配对一次，你也可以在下方让任意一个退出登录。",
+  "OTHER DEVICES ON MY NETWORK": "我网络中的其他设备",
+  "let phones and laptops on the same Wi-Fi open it too. It's plain HTTP: anyone on that network can watch the traffic, so don't turn this on on public Wi-Fi.": "让同一 Wi-Fi 下的手机和电脑也能打开它。这是未加密的 HTTP：该网络上的任何人都能看到流量，所以不要在公共 Wi-Fi 上开启。",
+  "ADDRESS": "地址",
+  "PAIRING CODE": "配对码",
+  "enter it in the browser you want to pair. Each code works once.": "在要配对的浏览器中输入它。每个代码只能用一次。",
+  "pairing is paused for a few minutes after too many wrong codes.": "错误代码太多，配对暂停几分钟。",
+  "Expires in 1 min.": "1 分钟后过期。",
+  "NEW CODE": "新代码",
+  "OPEN IN BROWSER": "在浏览器中打开",
+  "PAIRED BROWSERS": "已配对的浏览器",
+  "THIS BROWSER": "此浏览器",
+  "no browser paired yet.": "还没有配对的浏览器。",
+  "SIGN OUT": "退出登录",
+  "Sign this browser out? You will need a new pairing code to come back.": "让此浏览器退出登录？之后需要新的配对码才能回来。",
+  "YOU'RE USING EMBER IN A BROWSER": "你正在浏览器中使用 Ember",
+  "this page is a window onto the Ember node that serves it. Turning web access on or off, and the identity backup, happen on the computer running Ember.": "这个页面是通向提供它的 Ember 节点的窗口。开启或关闭网页访问以及身份备份，都要在运行 Ember 的电脑上进行。",
+  "only on the computer running Ember": "只能在运行 Ember 的电脑上进行",
+  "WEB ACCESS ON": "网页访问已开启",
+  "WEB ACCESS OFF": "网页访问已关闭",
+  "LOST CONTACT WITH EMBER · RECONNECTING…": "与 Ember 失去联系 · 正在重新连接…"
  },
  "patterns": [
   [
@@ -471,6 +494,18 @@
   [
    "^network error: (.+)$",
    "网络错误：$1"
+  ],
+  [
+   "^Expires in (\\d+) min\\.$",
+   "$1 分钟后过期。"
+  ],
+  [
+   "^last seen (\\S+)$",
+   "$1 前在线"
+  ],
+  [
+   "^port (\\d+) is already in use$",
+   "端口 $1 已被占用"
   ]
  ]
 }

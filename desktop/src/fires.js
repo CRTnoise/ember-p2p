@@ -22,6 +22,7 @@ class Fires {
   constructor ({ me, sign, verify, knownEdPk, hidden, onChange, terms }) {
     Object.assign(this, { me, sign, verify, knownEdPk, hidden, onChange, terms })
     this.mine = []                 // topic ids I sit at
+    this.decoys = []               // decoy topics: declared and relayed like real ones, never shown or spoken in
     this.members = new Map()       // fire -> Map(key -> {name, terms, seen, sockets:Set})
     this.msgs = new Map()          // fire -> [msg]
     this.seen = new Set()
@@ -30,17 +31,22 @@ class Fires {
     this.rl = new Map()            // author -> {tokens, ts}
   }
 
-  setMine (ids) {
+  // Which fires I declare is visible to every gossip peer, so the decoy rooms
+  // are declared too: otherwise this list would give the real topics away. At a
+  // decoy fire I'm a silent listener who relays; it never shows up for the user.
+  setMine (ids, decoys = []) {
     const next = [...new Set(ids)].filter(id => FIRE_ID.test(id)).slice(0, 8)
-    if (next.join() === this.mine.join()) return
-    this.mine = next
+    const nextD = [...new Set(decoys)].filter(id => FIRE_ID.test(id) && !next.includes(id)).slice(0, Math.max(0, 8 - next.length))
+    if (next.join() === this.mine.join() && nextD.join() === this.decoys.join()) return
+    this.mine = next; this.decoys = nextD
     for (const s of this.sockets) this.hello(s)
     this.changed()
   }
 
   hello (socket) {
     const m = this.me()
-    try { socket.write(JSON.stringify({ t: 'fire-here', key: m.key, name: P.nearText(m.name, 40), fires: this.mine, terms: (this.terms() || []).slice(0, 5) }) + '\n') } catch {}
+    const fires = [...this.mine, ...this.decoys].sort() // sorted: the order mustn't tell which are real
+    try { socket.write(JSON.stringify({ t: 'fire-here', key: m.key, name: P.nearText(m.name, 40), fires, terms: (this.terms() || []).slice(0, 5) }) + '\n') } catch {}
   }
 
   attach (socket) { this.sockets.add(socket); this.hello(socket) }
@@ -79,7 +85,7 @@ class Fires {
 
   onMsg (socket, raw) {
     const m = P.cleanFire(raw, Date.now())
-    if (!m || !this.mine.includes(m.fire) || this.hidden(m.author)) return
+    if (!m || !(this.mine.includes(m.fire) || this.decoys.includes(m.fire)) || this.hidden(m.author)) return
     if (m.author === this.me().key) return
     const id = `${m.author}:${m.ts}:${m.sig.slice(0, 16)}`
     if (this.seen.has(id)) return
@@ -88,7 +94,7 @@ class Fires {
     if (known && known !== m.edpk) return // signed with a key that isn't theirs
     if (!this.allow(m.author)) return
     this.seen.add(id); if (this.seen.size > 5000) this.seen = new Set([...this.seen].slice(-2500))
-    this.store({ ...m, id, verified: !!known })
+    if (this.mine.includes(m.fire)) this.store({ ...m, id, verified: !!known })
     this.relay(m, socket)
   }
 

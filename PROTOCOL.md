@@ -66,8 +66,10 @@ while the client has fewer than 3 gossip peers (left again at 6).
 **Compass (local only).** A decaying vector (≈3-week time constant) learned
 from the user's own actions, blended with the picked topics' seed words in the
 languages they read. It sits the client in the buckets of its own codes, plus
-1-, 2-bit and opposite-corner neighbours as the FAMILIAR ↔ STRANGE dial turns,
-and ranks Discover: FAMILIAR prefers posts closest to it, STRANGE the furthest.
+1-, 2-bit and opposite-corner neighbours as the FAMILIAR ↔ STRANGE dial turns.
+Discover lines posts up by closeness to it and the dial keeps one band of that
+line (closest 40 %, closest 70 %, furthest 70 %, furthest 40 %; at least 6
+posts), shown newest first.
 Nothing about the compass is sent; what peers can see is which buckets and
 rooms the client joins.
 
@@ -131,7 +133,9 @@ rides the gossip connections.
 {t:'fire-msg', m:{fire, author, edpk, name, ts, text, sig}}   // sig = Ed25519 over `fire` above
 ```
 `fire-here` declares which topic fires the sender sits at (≤ 8 ids matching
-`[a-z0-9-]{1,32}`); members unheard for 3 min are dropped. A fire is **lit**
+`[a-z0-9-]{1,32}`, sorted), its decoy rooms included: at a decoy fire a client is a
+silent member that relays but never speaks or shows it. Members unheard for
+3 min are dropped. A fire is **lit**
 for a client when at least two others sit at it. Messages (≤ 400 chars, `ts`
 within 15 min, name without `|` or control characters) are accepted only for
 fires the receiver sits at, verified, checked against the author's published

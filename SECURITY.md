@@ -77,6 +77,17 @@ can decide what to use it for.
   you subscribe to, and your circle's lists, only change what *you* see and
   relay: a malicious list can hide people from you, never from anyone else, and
   never someone you follow.
+- **Web access (off by default) and self-hosting.** Anyone holding a paired
+  browser session can do what you can in the app, except export or restore
+  the identity and switch web access off. Sessions are revocable in SETUP;
+  pairing codes are 8 digits, single-use, and lock for 5 minutes after 5 wrong
+  tries. The interface speaks plain HTTP: on localhost that's fine, on your
+  own Wi-Fi anyone on the network can watch the traffic, and anywhere else you
+  must put it behind HTTPS (reverse proxy, Tailscale…). A self-hosted node
+  keeps your identity key on that server: whoever controls the server is you.
+  Requests are checked for the host name (DNS rebinding) and for coming from
+  the page itself (Origin, JSON only, SameSite=Strict cookies), so other
+  websites can't act through your browser.
 - **Spam / Sybil.** Per-connection rate limits exist, but nothing stops
   someone from making many identities and filling a discovery bucket.
 
