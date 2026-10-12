@@ -20,7 +20,7 @@ npx electron test/ui/run.js # UI suite: clicks through the real interface (39 ca
 ## Build
 ```bash
 npm run build         # on Windows → dist/Ember-Setup-<v>.exe (installer) + dist/Ember-<v>-portable.exe
-npm run build-linux   # on Linux   → dist/Ember-<v>.AppImage
+npm run build-linux   # on Linux   → dist/Ember-<v>.AppImage + dist/ember_<v>_amd64.deb
 ```
 The first build downloads Electron and packaging tools, so it takes a few
 minutes. Output is roughly 100–230 MB, mostly Chromium and FFmpeg. Builds
