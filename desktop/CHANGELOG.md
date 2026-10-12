@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6.2 — Debian/Ubuntu package
+- New `ember_<version>_amd64.deb` for Ubuntu/Debian: `sudo apt install ./ember_<version>_amd64.deb`.
+  Installs to /opt/Ember with an `ember` command, app-menu entry and an
+  AppArmor profile so Electron's sandbox works on Ubuntu 24.04+. No `libfuse2` needed.
+  Thanks to @hasmeni for the first community contribution (#1).
+
 ## v2.6.1 — interaction fixes
 - **Message requests: ACCEPT / IGNORE / ACCEPT + FOLLOW work again** (inbox
   rail and full DM view). The list was built by attaching click handlers to
