@@ -169,4 +169,4 @@ function distanceKm (aLat, aLon, bLat, bLon) {
   return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)))
 }
 
-export { commonsTopic, probeTopicsForText, embed, codes, topicsForText, replyTopic, cosine, TABLES, BITS, DIM, AREA_RADII, areaCell, areaTopics, distanceKm }
+export { commonsTopic, probeTopicsForText, embed, codes, topicFor, topicsForText, replyTopic, cosine, TABLES, BITS, DIM, AREA_RADII, areaCell, areaTopics, distanceKm }

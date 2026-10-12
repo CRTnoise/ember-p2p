@@ -13,9 +13,9 @@ public** networks, or the DHT can't hole-punch and you'll see 0 peers.
 
 ## Test
 ```bash
-npm test                    # protocol suite: sanitizer, signatures, DM proof, deletes, nearby cards + area grid
+npm test                    # protocol (sanitizer, signatures, DM proof, deletes, nearby), taste (topics, compass, dial), campfires
 npm run test:nearby         # SAME AREA end to end over a private local DHT (three peers)
-npx electron test/ui/run.js # UI suite: clicks through the real interface (52 cases)
+npx electron test/ui/run.js # UI suite: clicks through the real interface (71 cases)
 ```
 
 ## Build
@@ -48,6 +48,10 @@ download the files from the run's artifacts.
 | `src/protocol.js` | **trust boundary**: sanitizer, signature formats, key cleaning, DM proof. Canonical copy shared with mobile |
 | `src/discovery.js` | LSH embedding + bucket topics, nearby area grid (shared with mobile) |
 | `src/nearby.js` | NEARBY: same-network beacons, same-area swarm, PC location → nearest town, town search |
+| `src/taste.js` | topics (recognised in EN/FR/ZH/AR), the local compass, the FAMILIAR ↔ STRANGE dial, "why am I seeing this" |
+| `src/topics.json` | the topic catalog: ids, labels and seed words in four languages |
+| `src/fires.js` | CAMPFIRES: live rooms over gossip connections, signed, memory-only |
+| `src/i18n/*.json` | interface translations (English is the source text) |
 | `src/places.tsv` | offline town list for SAME AREA (GeoNames, CC BY 4.0; `tools/build-places.js`) |
 | `src/dm.js` | E2E DM crypto (shared with mobile) |
 | `src/preload.js` | the only API the page can call |
@@ -55,6 +59,16 @@ download the files from the run's artifacts.
 
 After editing `protocol.js`, `discovery.js` or `dm.js`, run
 `node ../tools/sync-shared.js` so mobile gets the identical code.
+
+## Translating
+The interface is written in English; every other language is a dictionary in
+`src/i18n/<lang>.json` keyed by the exact English string, plus a few regex
+patterns for strings with numbers in them. Missing strings fall back to
+English. To list what a dictionary is missing, run
+`npx electron test/ui/i18n-collect.js fr` (or `zh`, `ar`): it walks through
+every view with demo data and writes the untranslated strings to a file.
+Adding a language also means adding it to `UI_LANGS` in `index.html`, to
+`LANGS` in `taste.js`, and labels/seed words for it in `topics.json`.
 
 ## Storage model
 Followers re-seed a sliding tail window (default 150 blocks) of each feed;

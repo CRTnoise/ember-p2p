@@ -24,6 +24,7 @@ they say to each other.
 | `profile` | `name`, `status`, `bio`, `avatar`, `dmKey`, `ts` (later fields win, missing fields fall back to older blocks) |
 | `follow` / `unfollow` | `key` |
 | `delete` | `ref {seq}`: tombstone; the target block is then cleared |
+| `modlist` | `keys` (≤ 5000 author keys), `ts`: the author's published blocklist; the newest one replaces older ones, an empty list retracts it |
 
 Readers must sanitize every block (`sanitizeBlock`) and tolerate holes:
 cleared blocks are skipped, never waited on.
@@ -33,13 +34,17 @@ cleared blocks are skipped, never waited on.
 |---|---|
 | feed replication | the core's `discoveryKey` |
 | discovery bucket | `sha256("ember/v1/disc/{table}/{code}")` |
+| topic room | `sha256("ember/v1/topic/{id}")`, `id` from the shared catalog (`desktop/src/topics.json`) |
 | commons bucket | `sha256("ember/v1/commons")` |
 | reply thread | `sha256("ember/v1/replies/{author}/{seq}")` |
 | DM inbox | `sha256("ember/v1/dm/{author}")` |
 | nearby area (opt-in) | `sha256("ember/v1/area/{grid}:{row}:{col}")`, on a dedicated swarm |
 
 Gossip and DM connections speak newline-delimited JSON. Each connection is
-rate-limited (burst 60, refill 20 msg/s).
+rate-limited (burst 60, refill 20 msg/s). Both sides speak first (`hello` /
+`dmhello`, or a near card on the area swarm); a connection that stays silent
+for 6 s (4 s on the area swarm) is closed, since the other side has already
+dropped it.
 
 ## Discovery (LSH)
 Text → 256-dim feature-hashed embedding (words, 4-char stems, bigrams, char
@@ -47,6 +52,24 @@ Text → 256-dim feature-hashed embedding (words, 4-char stems, bigrams, char
 hyperplanes derived from the seed `ember/v1/lsh` → 8 bucket topics. Clients
 join the buckets of what they write and read; queries also probe 1-bit-flip
 neighbours. Results are re-ranked by `0.78·cosine + 0.22·recency`.
+
+**Topic rooms.** LSH buckets are coarse, so a short post and a topic's seed
+words rarely share one. Topics therefore have named rooms. A client sits in
+the rooms of the topics its user picked, and a post is also sent into the
+rooms of the topics it is recognised as being about (seed words in EN, FR,
+ZH, AR; Arabic words are normalised and their article stripped), at most two
+per post. A client with topics also sits in two **decoy** rooms: the first two
+unpicked topics when the catalog is ordered by `sha256("{secret}:{id}")`, with
+a secret that never leaves the device. They are as stable as real picks. With topics picked, the commons bucket is only joined
+while the client has fewer than 3 gossip peers (left again at 6).
+
+**Compass (local only).** A decaying vector (≈3-week time constant) learned
+from the user's own actions, blended with the picked topics' seed words in the
+languages they read. It sits the client in the buckets of its own codes, plus
+1-, 2-bit and opposite-corner neighbours as the FAMILIAR ↔ STRANGE dial turns,
+and ranks Discover: FAMILIAR prefers posts closest to it, STRANGE the furthest.
+Nothing about the compass is sent; what peers can see is which buckets and
+rooms the client joins.
 
 ## Gossip messages
 | message | meaning |
@@ -57,12 +80,16 @@ neighbours. Results are re-ranked by `0.78·cosine + 0.22·recency`.
 
 Announcement `a`: `author, seq, ts, text, kind ('post'|'quote'|'reply'), ref, edpk, sig, sig2`, optional `thumb, mediaSeq, videoMeta`.
 
+A client does not relay (nor offer in `hello` replies) announcements from
+authors it muted or that its subscribed blocklists hide, except its own.
+
 ## Signatures (Ed25519 over UTF-8 strings)
 ```
 v1   = "{author}|{seq}|{ts}|{sha256(text)}"
 v2   = "ember/ann/2|{v1}|{sha256(kind|ref|sha256(thumb)|mediaSeq|videoMeta)}"
 del  = "ember/del/1|{author}|{seq}|{ts}"
 dm   = "ember/dm-proof/1|{challenge}|{author}"
+fire = "ember/fire/1|{fire}|{author}|{edpk}|{name}|{ts}|{sha256(text)}"
 ```
 Receivers drop an announcement whose `sig` fails, or whose `sig2` is present
 and fails. Media fields are kept only when bound by `sig2` (or when the
@@ -95,6 +122,30 @@ and looks up (`client`) the 3×3 block around it in the grid that covers its
 radius (`fine` up to 50 km, `coarse` up to 150 km). Anyone within one cell is
 always found; the chosen radius (10/25/50/150 km) is then enforced on town
 centres. On connect, and every 2 min, each side sends `{t:'near', c:card}`.
+
+## Campfires
+A campfire is a live room for one topic. It is not a swarm of its own: it
+rides the gossip connections.
+```
+{t:'fire-here', key, name, fires:[topicId…], terms:[]}        // on connect, on change, and every 60 s
+{t:'fire-msg', m:{fire, author, edpk, name, ts, text, sig}}   // sig = Ed25519 over `fire` above
+```
+`fire-here` declares which topic fires the sender sits at (≤ 8 ids matching
+`[a-z0-9-]{1,32}`); members unheard for 3 min are dropped. A fire is **lit**
+for a client when at least two others sit at it. Messages (≤ 400 chars, `ts`
+within 15 min, name without `|` or control characters) are accepted only for
+fires the receiver sits at, verified, checked against the author's published
+key when known, rate-limited per author (burst 5, then 1 per 2 s), deduplicated,
+and relayed once to the other members' connections. They are kept in memory
+only (last 200 per fire) and dropped when the fire goes out. Desktop sends
+`terms` empty: nothing from the compass leaves the device.
+
+## Moderation lists
+`modlist` blocks are opt-in. A client may **subscribe** to an author's list:
+every key on the newest list is hidden for it. It may also use the lists of
+the authors it follows as a signal: a key on two or more of them is hidden from
+Discover, a key on one is ranked down. Keys the client follows are never
+hidden. Lists only ever change what the subscriber sees and relays.
 
 ## Direct messages
 1. On connect both sides send `{t:'dmhello', v:2, key, chal}` (32 random bytes, hex).

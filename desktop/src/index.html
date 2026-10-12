@@ -5,6 +5,10 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>EMBER</title>
 <style>
+  @font-face{font-family:"EmberArabic";unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF;
+    src:local("Segoe UI"),local("SegoeUI"),local("Noto Sans Arabic"),local("NotoSansArabic-Regular"),local("Noto Naskh Arabic"),local("Geeza Pro"),local("Tahoma"),local("DejaVu Sans"),local("DejaVuSans"),local("Arial")}
+  @font-face{font-family:"EmberCJK";unicode-range:U+2E80-9FFF,U+F900-FAFF,U+FF00-FFEF;
+    src:local("Microsoft YaHei"),local("MicrosoftYaHei"),local("PingFang SC"),local("PingFangSC-Regular"),local("Noto Sans CJK SC"),local("NotoSansCJKsc-Regular"),local("Noto Sans SC"),local("Source Han Sans SC"),local("WenQuanYi Micro Hei")}
   /* ============ SEMANTIC TOKENS ============
      Rule: no raw colors in components. Every theme is designed as its own
      palette (desaturated tonal variants, contrast-checked) — never inverted. */
@@ -17,7 +21,9 @@
     --line:#000000;           /* borders */
     --shadow:rgba(0,0,0,.14);
     --accent:#c85a19;         /* functional: notifications, unread */
-    --mono:ui-monospace,Menlo,Consolas,monospace;
+    /* Arabic and Chinese glyphs go to a font that can actually shape them (monospace
+       fonts either lack them or only carry isolated Arabic letters); Latin stays mono */
+    --mono:"EmberArabic","EmberCJK",ui-monospace,Menlo,Consolas,monospace;
     --dur:180ms; --dur-slow:280ms;
     --ease-out:cubic-bezier(.22,1,.36,1); --ease-in:cubic-bezier(.55,0,.55,.2);
   }
@@ -567,6 +573,71 @@
          background:repeating-linear-gradient(45deg,var(--panel),var(--panel) 1px,var(--paper) 1px,var(--paper) 6px)}
   .obpfp img{width:100%;height:100%;object-fit:cover}
 
+  /* ============ v2.8: languages, taste, campfires ============ */
+  .restorebar{display:none;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);
+              background:color-mix(in srgb,var(--accent) 12%,transparent);font:400 11px/1.5 var(--mono);color:var(--ink)}
+  .restorebar.show{display:flex}
+  .restorebar .rb{flex:1}
+  .restorebar b{font-weight:700;letter-spacing:.08em}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{all:unset;cursor:pointer;border:1px solid var(--line);padding:7px 10px;font:500 10px/1 var(--mono);letter-spacing:.1em;
+        color:var(--ink);user-select:none;transition:background var(--dur) var(--ease-out)}
+  .chip:hover{background:var(--panel)}
+  .chip.on{background:var(--ink);color:var(--inv)}
+  .chip.term{letter-spacing:.02em}
+  .chip.term .x{margin-inline-start:7px;opacity:.55}
+  .chip.term:hover .x{opacity:1}
+  .chip.neg{color:var(--muted);border-style:dashed}
+  .sethead{padding:24px 20px 9px;font:700 9px/1 var(--mono);letter-spacing:.24em;color:var(--soft);border-bottom:1px solid var(--line)}
+  .setrow.col{flex-direction:column;align-items:stretch}
+  .setrow .rowline{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .setrow .rowline .field{margin:0;flex:1}
+  .langpick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 16px}
+  .langbtn{all:unset;cursor:pointer;border:1px solid var(--line);padding:14px 12px;font:700 15px/1 var(--mono);text-align:center;color:var(--ink)}
+  .langbtn:hover{background:var(--panel)}
+  .langbtn.on{background:var(--ink);color:var(--inv)}
+  .langbtn small{display:block;font:400 9px/1.3 var(--mono);letter-spacing:.1em;margin-top:6px;opacity:.7}
+  .obbox.wide{width:min(640px,94vw)}
+  .obtopics{max-height:38vh;overflow-y:auto;padding:2px}
+  .oblabel{font:700 9px/1 var(--mono);letter-spacing:.2em;color:var(--soft);margin:14px 0 8px}
+  .why{display:flex;gap:6px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);
+       font:500 9px/1 var(--mono);letter-spacing:.14em;color:var(--soft);background:var(--panel)}
+  .why .w{color:var(--ink)}
+  .why.flag{color:var(--accent)}
+  .dialrow{display:flex;align-items:center;gap:10px;padding:2px 16px 14px;font:500 9px/1 var(--mono);letter-spacing:.16em;color:var(--soft)}
+  .dialrow .rchip{padding:8px 10px}
+  .quietbox{margin:4px 16px 18px;border:1px dashed var(--line);padding:14px 16px;font:400 11px/1.6 var(--mono);color:var(--muted)}
+  .quietbox b{color:var(--ink);letter-spacing:.08em}
+  .quietbox .btn{margin-top:10px}
+  .firerow{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);cursor:pointer;animation:rise var(--dur) var(--ease-out)}
+  .firerow:hover{background:var(--panel)}
+  .firerow .fl{flex:1;min-width:0}
+  .firerow .ft{font:700 12px/1 var(--mono);letter-spacing:.08em;color:var(--ink)}
+  .firerow .fd{font:400 10px/1.5 var(--mono);color:var(--muted);margin-top:6px}
+  .flame{width:14px;height:14px;border:2px solid var(--soft);transform:rotate(45deg);flex:none}
+  .firerow.lit .flame{border-color:var(--accent);background:var(--accent);animation:pulse 1.8s ease-in-out infinite}
+  .firechat{display:flex;flex-direction:column;height:calc(100% - 37px)}
+  .firemsgs{flex:1;overflow-y:auto;padding:12px 20px}
+  .fmsg{padding:7px 0;border-bottom:1px dashed color-mix(in srgb,var(--line) 25%,transparent)}
+  .fmsg .fwho{font:700 11px/1 var(--mono);color:var(--ink);cursor:pointer}
+  .fmsg .fts{font:400 9px/1 var(--mono);color:var(--soft);margin-inline-start:8px}
+  .fmsg .fmtext{font:400 13px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--ink);margin-top:4px;unicode-bidi:plaintext;word-break:break-word}
+  .fmsg.mine .fwho{color:var(--accent)}
+  .fireinput{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line)}
+  .fireinput input{flex:1;border:1px solid var(--line);height:32px;padding:0 10px;font:400 12px/1 var(--mono);outline:none;background:var(--paper);color:var(--ink);unicode-bidi:plaintext}
+  .firenote{padding:10px 20px;font:400 10px/1.5 var(--mono);color:var(--soft);border-bottom:1px solid var(--line)}
+  /* user text keeps its own direction whatever the interface language */
+  .body,.bubble,.scap,textarea,input{unicode-bidi:plaintext;text-align:start}
+  /* Chinese and Arabic: no tracking (it breaks Arabic joining and spaces CJK apart), slightly larger type */
+  html[lang=zh] body *,html[lang=ar] body *{letter-spacing:0!important}
+  .meta,.phandle,.keymini,.obkey,.nsub,#irlist .p,#dmlist .p,.firerow .fd span[data-noi18n]{unicode-bidi:plaintext}
+  html[dir=rtl] .switch .knob{left:auto;right:2px;transition:right 160ms var(--ease-out)}
+  html[dir=rtl] .switch.on .knob{right:22px}
+  html[dir=rtl] .body{max-width:none}
+  html[dir=rtl] .cardmenu{right:auto;left:10px}
+  html[dir=rtl] .prox,html[dir=rtl] .netstat{margin-left:0;margin-right:auto}
+  html[dir=rtl] .netstat{text-align:left}
+
   .toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--inv);
          font:500 11px/1 var(--mono);letter-spacing:.1em;padding:9px 14px;opacity:0;pointer-events:none;
          transition:opacity var(--dur) var(--ease-out),transform var(--dur) var(--ease-out)}
@@ -601,6 +672,7 @@
         <button id="nav-feed" class="on" onclick="go('feed')"><span class="ic">▤</span><span class="lb">FEED</span><span class="dot" id="dot-feed"></span></button>
         <button id="nav-discover" onclick="go('discover')"><span class="ic">◎</span><span class="lb">DISCOVER</span></button>
         <button id="nav-nearby" onclick="go('nearby')"><span class="ic">◌</span><span class="lb">NEARBY</span><span class="dot" id="dot-nearby"></span></button>
+        <button id="nav-fires" onclick="go('fires')"><span class="ic">▲</span><span class="lb">CAMPFIRES</span><span class="dot" id="dot-fires"></span></button>
         <button id="nav-notifs" onclick="go('notifs')"><span class="ic">◈</span><span class="lb">NOTIFS</span><span class="dot" id="dot-notifs"></span></button>
         <button id="nav-saved" onclick="go('saved')"><span class="ic">◆</span><span class="lb">SAVED</span></button>
         <button id="nav-profile" onclick="openProfile(ME.key)"><span class="ic">◍</span><span class="lb">PROFILE</span></button>
@@ -614,6 +686,10 @@
     <div class="stories" id="storiesRail"></div>
 
     <div class="center" style="border-right:0">
+      <div class="restorebar" id="restoreBar">
+        <div class="rb"><b>RESTORING YOUR IDENTITY</b> · downloading your history from the people who hold it. Posting is paused until it arrives, so your log can't split in two.</div>
+        <button class="btn" id="restoreSkip">IT NEVER POSTED · START NOW</button>
+      </div>
       <div class="composeouter" id="composeOuter">
       <div class="compose" id="composeBar">
         <textarea id="text" maxlength="560" placeholder="say something to the swarm…"></textarea>
@@ -649,6 +725,7 @@
       <div class="ppage" id="ppage"></div>
       <div class="ppage" id="setpage"></div>
       <div class="ppage" id="nearpage"></div>
+      <div class="ppage" id="firepage"></div>
       <div class="ppage" id="notifpage"></div>
       <div class="dmwrap" id="dmwrap">
         <div class="dmlist" id="dmlist"></div>
@@ -751,7 +828,15 @@
   <div class="obbox">
     <div class="oblogo"><div class="mark"></div><span class="word">EMBER</span></div>
 
-    <div class="obstep on" id="ob1">
+    <div class="obstep on" id="ob0">
+      <div class="obh" data-noi18n>LANGUAGE · LANGUE · 语言 · اللغة</div>
+      <div class="langpick" id="obLangs"></div>
+      <div class="oblabel" id="obReadLabel">I ALSO READ</div>
+      <div class="chips" id="obRead"></div>
+      <div class="obrow"><button class="btn solid" id="obLangGo">CONTINUE →</button></div>
+    </div>
+
+    <div class="obstep" id="ob1">
       <div class="obh">NO SERVERS. NO ACCOUNTS. NO ALGORITHM.</div>
       <div class="obp">Your feed lives on your machine and travels peer-to-peer. Content stays alive
       as long as someone keeps it warm — followers re-seed what they read, watchers seed what they watch.
@@ -767,6 +852,17 @@
       <input class="field" id="obName" placeholder="display name" maxlength="32">
       <input class="field" id="obStatus" placeholder="status · optional" maxlength="48">
       <div class="obrow"><button class="btn solid" id="obSave">CONTINUE →</button></div>
+    </div>
+
+    <div class="obstep" id="obT">
+      <div class="obh">WHAT ARE YOU INTO?</div>
+      <div class="obp">Pick a few. Each one is a room on the network: you'll sit in it, and posts about it reach you.
+      Rooms may be empty at first, that's fine: they fill as people arrive. You can change this any time in SETUP.</div>
+      <div class="obtopics"><div class="chips" id="obTopics"></div></div>
+      <div class="oblabel">OR SAY IT IN YOUR OWN WORDS</div>
+      <input class="field" id="obTopicText" maxlength="280" placeholder="e.g. analog synths, risograph zines, rai music">
+      <div class="legend">this never leaves your machine. what the network sees is which rooms you sit in, and Ember adds two random decoy rooms so nobody can tell which ones are really yours.</div>
+      <div class="obrow"><button class="btn solid" id="obTopicsGo">CONTINUE →</button></div>
     </div>
 
     <div class="obstep" id="ob3">
@@ -889,10 +985,10 @@ const safeSrc = s => (typeof s === 'string' && SAFE_SRC.test(s)) ? s : ''
 function dayLabel (ts) {
   const d = new Date(ts), now = new Date()
   const sameDay = (a, b) => a.toDateString() === b.toDateString()
-  if (sameDay(d, now)) return 'TODAY'
+  if (sameDay(d, now)) return tr('TODAY')
   const y = new Date(now); y.setDate(y.getDate() - 1)
-  if (sameDay(d, y)) return 'YESTERDAY'
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }).toUpperCase()
+  if (sameDay(d, y)) return tr('YESTERDAY')
+  return d.toLocaleDateString(LANG, { day: 'numeric', month: 'short' }).toUpperCase()
 }
 const ago = ts => { const s=(Date.now()-ts)/1000
   if(s<60)return'now'; if(s<3600)return Math.floor(s/60)+'m'; if(s<86400)return Math.floor(s/3600)+'h'
@@ -937,22 +1033,90 @@ function shrinkImage (file, maxFull=900, maxThumb=96) {
   })
 }
 
+/* ============ LANGUAGES ============ */
+// English is the source text. Other languages are dictionaries keyed by the
+// exact English string (whitespace folded), plus a few patterns for strings with
+// numbers in them. Text people wrote (posts, names, messages) is never touched.
+const UI_LANGS = { en: ['ENGLISH', 'English'], fr: ['FRANÇAIS', 'Français'], zh: ['中文', '简体中文'], ar: ['العربية', 'عربي'] }
+let LANG = 'en', I18N = null, I18N_PATS = []
+let TASTE = { catalog: [], topics: [], terms: [], avoid: [], dial: 1, readLangs: ['en'], onboarded: true, campfires: true }
+const I18N_SKIP = '.word,.body,.who,.pname,.bubble,.state,.pstatus,.scap,.fmtext,.fwho,.k,.obkey,.keymini,.nsub,.daysep,#irWho,#irlist .n,#irlist .p,#dmlist .n,#dmlist .p,[data-noi18n],script,style,textarea,code'
+const fold = s => s.replace(/\s+/g, ' ').trim()
+function tr (s) {
+  if (!I18N || !s) return s
+  const k = fold(String(s)); if (!k) return s
+  let out = I18N[k]
+  if (out == null) for (const [re, rep] of I18N_PATS) if (re.test(k)) { out = k.replace(re, (...m) => rep.replace(/\$(\d)/g, (_, i) => { const g = m[+i] || ''; return I18N[g] != null ? I18N[g] : g })); break }
+  if (out == null) { if (window.__i18nMiss) window.__i18nMiss.add(k); return s }
+  return String(s).match(/^\s*/)[0] + out + String(s).match(/\s*$/)[0]
+}
+const DONE = new WeakMap()
+function trText (n) {
+  const v = n.nodeValue
+  if (DONE.get(n) === v || !/[A-Za-z]{2}/.test(v)) return
+  const o = tr(v); DONE.set(n, o); if (o !== v) n.nodeValue = o
+}
+function trAttrs (el) {
+  for (const a of ['placeholder', 'title']) {
+    const v = el.getAttribute && el.getAttribute(a)
+    if (v && /[A-Za-z]{2}/.test(v)) { const o = tr(v); if (o !== v) el.setAttribute(a, o) }
+  }
+}
+function trTree (root) {
+  if (!I18N || !root) return
+  if (root.nodeType === 3) { const p = root.parentElement; if (!p || !p.closest(I18N_SKIP)) trText(root); return }
+  if (root.nodeType !== 1) return
+  if (root.closest && root.closest('[data-noi18n]')) return
+  if (!root.matches(I18N_SKIP)) trAttrs(root)
+  else if (root.matches('input,textarea')) { trAttrs(root); return } else return
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+    acceptNode: n => n.nodeType === 1 ? (n.matches(I18N_SKIP) ? (n.matches('textarea') && trAttrs(n), NodeFilter.FILTER_REJECT) : NodeFilter.FILTER_ACCEPT) : NodeFilter.FILTER_ACCEPT
+  })
+  let n; while ((n = w.nextNode())) { if (n.nodeType === 3) trText(n); else trAttrs(n) }
+}
+let MO = null
+async function setLanguage (lang) {
+  LANG = UI_LANGS[lang] ? lang : 'en'
+  try { localStorage.setItem('emberLang', LANG) } catch {}
+  document.documentElement.lang = LANG
+  document.documentElement.dir = LANG === 'ar' ? 'rtl' : 'ltr'
+  if (LANG === 'en') return
+  const d = await window.ember.i18n(LANG)
+  if (!d) return
+  I18N = d.strings || {}
+  I18N_PATS = (d.patterns || []).map(([re, rep]) => [new RegExp(re), rep])
+  trTree(document.body)
+  if (!MO) {
+    MO = new MutationObserver(muts => {
+      for (const m of muts) {
+        if (m.type === 'characterData') { const p = m.target.parentElement; if (!p || !p.closest(I18N_SKIP)) trText(m.target) }
+        else for (const n of m.addedNodes) trTree(n)
+      }
+    })
+    MO.observe(document.body, { childList: true, subtree: true, characterData: true })
+  }
+}
+const topicLabel = id => { const t = TASTE.catalog.find(x => x.id === id); if (!t) return id; const l = t.label[LANG] || t.label.en; return LANG === 'fr' || LANG === 'en' ? l.toUpperCase() : l }
+async function loadTaste () { try { TASTE = await window.ember.tasteState() } catch {} return TASTE }
+function guessLang () { const n = (navigator.language || 'en').slice(0, 2).toLowerCase(); return UI_LANGS[n] ? n : 'en' }
+
 /* ============ NAVIGATION ============ */
 
 function go (view) {
   VIEW = view
-  for (const v of ['feed','discover','nearby','notifs','saved','profile','settings']) {
+  for (const v of ['feed','discover','nearby','fires','notifs','saved','profile','settings']) {
     const b = $('#nav-'+v); if (b) b.classList.toggle('on', v===view)
   }
   $('#ppage').classList.toggle('open', view==='profile')
   $('#setpage').classList.toggle('open', view==='settings')
   $('#nearpage').classList.toggle('open', view==='nearby')
+  $('#firepage').classList.toggle('open', view==='fires')
   $('#notifpage').classList.toggle('open', view==='notifs')
   $('#dmwrap').classList.toggle('open', view==='inbox')
   $('#inboxRail').style.display = view==='inbox' ? 'none' : 'flex'
   $('#feedScroll').style.display = (view==='feed'||view==='discover'||view==='saved') ? 'block' : 'none'
   $('#composeBar').style.display = view==='feed' ? 'flex' : 'none'
-  $('#search').placeholder = view==='discover' ? 'search by meaning — enters matching buckets' : 'filter feed'
+  $('#search').placeholder = tr(view==='discover' ? 'search by meaning — enters matching buckets' : 'filter feed')
   $('.search') && document.querySelector('.search').classList.toggle('hidden', !['feed','discover','saved'].includes(view))
   if (view==='feed') { PENDING.feed=0; refresh(); markRead('post') }
   if (view==='discover') { PENDING.discover=0; renderDiscover() }
@@ -961,6 +1125,7 @@ function go (view) {
   if (view==='notifs') renderNotifs()
   if (view==='settings') renderSettings()
   if (view==='nearby') renderNearby()
+  if (view==='fires') { $('#dot-fires').classList.remove('show'); renderFires() }
   updatePill()
 }
 
@@ -977,8 +1142,18 @@ function card (it, opts = {}) {
   el.dataset.author = it.author; el.dataset.seq = it.seq
   const isSaved = SAVED_IDS.has(id)
 
+  // ---- why this is in your Discover ----
+  let why = ''
+  if (opts.discover && it.why) {
+    const w = it.why
+    const words = w.k === 'topic' ? `<span class="w" data-noi18n>${esc(topicLabel(w.topic))}</span>`
+      : w.k === 'compass' ? `<span class="w" data-noi18n>${esc((w.terms || []).join(' · '))}</span>` : ''
+    const label = { search: 'MATCHES YOUR SEARCH', follow: 'YOU FOLLOW THEM', topic: 'A TOPIC YOU PICKED ·', compass: 'SHARES WORDS WITH YOUR COMPASS ·', near: 'CLOSE TO YOUR COMPASS', wide: 'FROM FURTHER OUT' }[w.k] || ''
+    why = `<div class="why ${it.flagged ? 'flag' : ''}"><span>◎</span><span>${label}</span>${words}${it.flagged ? '<span>· ON A LIST OF SOMEONE YOU FOLLOW</span>' : ''}</div>`
+  }
+
   // ---- head: avatar · name/handle · status · ··· ----
-  let inner = `
+  let inner = why + `
     <div class="cardhead">
       ${avatarHTML(it.author)}
       <div class="headid">
@@ -1031,6 +1206,7 @@ function card (it, opts = {}) {
     : `<button data-m="dm">✉ DM ${esc(name).toUpperCase().slice(0,10)}</button>
        <button data-m="prof">◍ PROFILE</button>
        <button data-m="copy">COPY KEY</button>
+       ${opts.discover ? '<button data-m="notint">NOT INTERESTED</button>' : ''}
        <button data-m="mute">MUTE</button>
        <button data-m="block" class="danger">BLOCK</button>`)
   return el
@@ -1068,9 +1244,10 @@ function wireCards (root) {
         else if (act === 'prof') openProfile(author)
         else if (act === 'copy') { navigator.clipboard.writeText(author); toast('KEY COPIED') }
         else if (act === 'mute') { await window.ember.mute(author); toast('MUTED'); refresh() }
+        else if (act === 'notint') { await window.ember.notInterested(author, seq); toast('GOT IT · LESS LIKE THIS'); el.remove() }
         else if (act === 'block') { await window.ember.block(author); toast('BLOCKED'); refresh() }
         else if (act === 'del') {
-          if (!confirm('Delete this post? It disappears from the network and your device. Only saved copies survive.')) return
+          if (!confirm(tr('Delete this post? It disappears from the network and your device. Only saved copies survive.'))) return
           await window.ember.deletePost(seq); toast('DELETED · TOMBSTONE GOSSIPED'); OWN_ACTION = Date.now(); refresh()
         }
       })
@@ -1305,14 +1482,30 @@ function renderFeed () {
   }
 }
 
+const DIAL = ['FAMILIAR', '·', '··', 'STRANGE']
 async function renderDiscover () {
   const q = $('#search').value.trim()
   DISC = await window.ember.discover(q)
   NET.buckets = DISC.buckets; NET.gossip = DISC.gossipPeers; netRender()
   const feed = $('#feed'); feed.innerHTML=''
   const l=document.createElement('div'); l.className='daylabel'
-  l.textContent = q ? `NEAREST TO “${q.toUpperCase().slice(0,40)}”` : 'DRIFTING THROUGH YOUR BUCKETS'
+  if (q) l.innerHTML = `<span>NEAREST TO</span> <span data-noi18n>“${esc(q.toUpperCase().slice(0,40))}”</span>`
+  else l.textContent = 'DRIFTING THROUGH YOUR BUCKETS'
   feed.appendChild(l)
+  if (!q) {
+    const d = document.createElement('div'); d.className = 'dialrow'
+    d.innerHTML = `<span>FAMILIAR</span><div class="radii">${[0,1,2,3].map(i => `<button class="rchip ${i===DISC.dial?'on':''}" data-d="${i}" title="${['closest to what you\'re into','a step aside','further out','the far side of your compass'][i]}">${'◆'.repeat(i+1)}</button>`).join('')}</div><span>STRANGE</span>`
+    d.querySelectorAll('.rchip').forEach(b => b.onclick = async () => { await window.ember.tasteSet({ dial: +b.dataset.d }); renderDiscover() })
+    feed.appendChild(d)
+  }
+  if (DISC.quiet && !q) {
+    const box = document.createElement('div'); box.className = 'quietbox'
+    box.innerHTML = DISC.topics
+      ? `<b>IT'S QUIET IN YOUR ROOMS.</b> <span>${DISC.topics===1 ? 'You\'re sitting in 1 topic room.' : `You're sitting in ${DISC.topics} topic rooms.`}</span> <span>They fill up as people with the same interests come online.</span> ${DISC.commons ? '<span>Meanwhile the commons trickles in so you\'re never alone.</span>' : ''}`
+      : `<b>IT'S QUIET HERE.</b> Pick a few topics and you'll sit in their rooms on the network: posts about them will drift in here.<br><button class="btn solid" id="qPick">PICK TOPICS</button>`
+    feed.appendChild(box)
+    if (box.querySelector('#qPick')) box.querySelector('#qPick').onclick = () => { go('settings'); setTimeout(() => { const t = $('#s-topics'); if (t) t.scrollIntoView({ block: 'center' }) }, 300) }
+  }
   if (!DISC.items.length) {
     feed.insertAdjacentHTML('beforeend', '<div class="empty">no strangers in your buckets yet. the more you post, the more meaning-space you occupy.</div>')
     return
@@ -1342,9 +1535,10 @@ async function renderNotifs () {
     const row = document.createElement('div')
     row.className = 'notifrow' + (n.read ? '' : ' unread')
     const label = n.type==='reply' ? '◈ REPLY' : n.type==='dm' ? '✉ DM' : '▤ POST'
-    const line = n.type==='reply' ? `${esc(nameFor(n.from))} replied to your post`
-               : n.type==='dm' ? `${esc(nameFor(n.from))} sent you an encrypted message`
-               : `${esc(nameFor(n.from))} posted`
+    const who = `<span class="who" style="cursor:inherit">${esc(nameFor(n.from))}</span>`
+    const line = n.type==='reply' ? `${who} <span>replied to your post</span>`
+               : n.type==='dm' ? `${who} <span>sent you an encrypted message</span>`
+               : `${who} <span>posted</span>`
     row.innerHTML = `<div class="ntype">${label}</div>
       <div class="nbody"><div class="nline">${line}</div><div class="nsub">${esc(n.text||'')}</div></div>
       <div class="nts">${ago(n.ts)}</div>`
@@ -1710,7 +1904,7 @@ function renderNearPeople () {
   const sa = NEAR.saved && NEAR.saved.area
   const how = sa && sa.source === 'located' ? 'from this PC\'s location' : 'typed by you'
   if (stat) stat.innerHTML = sa
-    ? `${NEAR.hidden ? 'paused (hidden)' : 'visible'} around <b>${esc(sa.place)}</b> · ${sa.radius} km · ${how}${NEAR.area.on ? ` · ${NEAR.area.connections || 0} area connection${NEAR.area.connections===1?'':'s'}` : ''}`
+    ? `<span>${NEAR.hidden ? 'paused (hidden) around' : 'visible around'}</span> <b data-noi18n>${esc(sa.place)}</b> · ${sa.radius} km · <span>${how}</span>${NEAR.area.on ? ` · <span>${NEAR.area.connections === 1 ? '1 area connection' : (NEAR.area.connections || 0) + ' area connections'}</span>` : ''}`
     : 'not sharing an area'
   const people = NEAR.people || []
   const anyOn = NEAR.lan.on || NEAR.area.on
@@ -1760,13 +1954,52 @@ async function renderSettings () {
     `<div class="theme ${s.theme===k?'on':''}" data-t="${k}">
        <div class="tsw"><span style="background:${c[0]}"></span><span style="background:${c[1]}"></span><span style="background:${c[2]}"></span></div>
        <div class="tl">${k.toUpperCase()}</div></div>`).join('')
+  await loadTaste()
+  const T = TASTE
+  const langChips = Object.entries(UI_LANGS).map(([k, v]) => `<button class="chip ${k===LANG?'on':''}" data-ui="${k}" data-noi18n>${v[0]}</button>`).join('')
+  const readChips = Object.entries(UI_LANGS).map(([k, v]) => `<button class="chip ${T.readLangs.includes(k)?'on':''}" data-rd="${k}" data-noi18n>${v[0]}</button>`).join('')
+  const topicChips = T.catalog.map(t => `<button class="chip ${T.topics.includes(t.id)?'on':''}" data-tp="${t.id}" data-noi18n>${esc(topicLabel(t.id))}</button>`).join('')
+  const termChips = T.terms.length ? T.terms.map(x => `<button class="chip term" data-term="${attr(x.term)}" title="remove from your compass"><span data-noi18n>${esc(x.term)}</span><span class="x">×</span></button>`).join('')
+    : '<span class="sd">empty for now: it fills in as you post, reply, repost and save.</span>'
+  const avoidChips = T.avoid.map(x => `<button class="chip term neg" data-term="${attr(x.term)}" title="forget this"><span data-noi18n>${esc(x.term)}</span><span class="x">×</span></button>`).join('')
   page.innerHTML = `
     <div class="ptabs"><div class="ptab on">SETUP</div></div>
+    <div class="sethead">LANGUAGE</div>
+    <div class="setrow"><div class="sl"><div class="st">INTERFACE</div>
+      <div class="sd">the language Ember speaks to you in. posts stay in the language they were written in.</div></div>
+      <div class="chips">${langChips}</div></div>
+    <div class="setrow"><div class="sl"><div class="st">LANGUAGES I READ</div>
+      <div class="sd">used to tune Discover and to read your topics' seed words in the right languages</div></div>
+      <div class="chips">${readChips}</div></div>
+    <div class="setrow"><div class="sl"><div class="st">ONLY POSTS I CAN READ</div>
+      <div class="sd">hide Discover posts written in a script you don't read (Latin, Chinese, Arabic)</div></div>${sw('s-onlylangs', T.onlyMyLangs)}</div>
+    <div class="sethead">WHAT YOU'RE INTO</div>
+    <div class="setrow col" id="s-topics"><div class="sl"><div class="st">TOPICS</div>
+      <div class="sd">each topic is a room on the network: you sit in it, posts about it reach you. Ember also sits in two random decoy rooms, so nobody watching can tell which ones are really yours.</div></div>
+      <div class="chips" style="margin-top:10px">${topicChips}</div>
+      <div class="rowline"><input class="field" id="s-topictext" maxlength="280" placeholder="in your own words: e.g. analog synths, risograph zines" value="${attr(T.topicText||'')}"><button class="btn" id="s-topictextset">SET</button></div></div>
+    <div class="setrow col"><div class="sl"><div class="st">COMPASS</div>
+      <div class="sd">what Discover learned from what you post, reply to, repost and save (and from what you mute or mark not interested). It fades over a few weeks, never leaves this machine, and every word can be removed.</div></div>
+      <div class="chips" style="margin-top:10px">${termChips}</div>
+      ${avoidChips ? `<div class="sd" style="margin-top:12px">LESS OF</div><div class="chips" style="margin-top:6px">${avoidChips}</div>` : ''}
+      <div class="rowline"><button class="btn" id="s-tastereset">RESET COMPASS</button></div></div>
+    <div class="setrow"><div class="sl"><div class="st">CAMPFIRES</div>
+      <div class="sd">when you and 2+ others sit in the same topic room at the same moment, a live room lights up. Nothing in it is stored; it goes out when people leave.</div></div>${sw('s-fires', T.campfires)}</div>
+    <div class="sethead">SAFETY</div>
+    <div class="setrow"><div class="sl"><div class="st">SHARE MY BLOCKLIST</div>
+      <div class="sd">publish the keys you block in your own signed log, so people who trust your judgement can subscribe. Off = your blocks stay private (turning it off publishes an empty list).</div></div><span id="m-pub"></span></div>
+    <div class="setrow"><div class="sl"><div class="st">LISTEN TO MY CIRCLE</div>
+      <div class="sd">if two people you follow both block someone, they're hidden from your Discover; one, and they're ranked down. People you follow are never hidden.</div></div><span id="m-circle"></span></div>
+    <div class="setrow col"><div class="sl"><div class="st">SUBSCRIBED BLOCKLISTS</div>
+      <div class="sd">everyone on a list you subscribe to is hidden for you, and their posts stop travelling through you. Nothing is ever deleted or enforced on anyone else.</div></div>
+      <div class="rowline"><input class="field" id="m-subkey" placeholder="paste the key of someone whose blocklist you trust"><button class="btn" id="m-subbtn">SUBSCRIBE</button></div>
+      <div id="m-subs" style="margin-top:10px"></div></div>
+    <div class="sethead">GENERAL</div>
     <div class="setrow"><div class="sl"><div class="st">THEME</div>
       <div class="sd">each palette designed as tonal variants, contrast-checked — never inverted</div></div>
       <div class="themes">${themeBtns}</div></div>
     <div class="setrow"><div class="sl"><div class="st">COMMONS BUCKET</div>
-      <div class="sd">global rendezvous so small networks always meet. off = proximity buckets only (takes effect after restart when disabling)</div></div>${sw('s-commons', s.commons)}</div>
+      <div class="sd">global rendezvous so small networks always meet. With topics picked it's a trickle: only while you have fewer than 3 gossip peers.</div></div>${sw('s-commons', s.commons)}</div>
     <div class="setrow"><div class="sl"><div class="st">START WITH SYSTEM</div>
       <div class="sd">launch Ember (to tray) at login, so you're always seeding and reachable</div></div>${sw('s-auto', s.autostart)}</div>
     <div class="setrow"><div class="sl"><div class="st">KEEP DM HISTORY</div>
@@ -1797,6 +2030,7 @@ async function renderSettings () {
     await window.ember.setSettings({ [key]: now })
   } }
   bind('s-commons','commons'); bind('s-dm','keepDmHistory'); bind('s-auto','autostart')
+  wireTasteSettings(page)
   document.getElementById('s-tailset').onclick = async () => {
     await window.ember.setSettings({ tailWindow: parseInt(document.getElementById('s-tail').value)||150 })
     toast('TAIL WINDOW SET')
@@ -1812,7 +2046,7 @@ async function renderSettings () {
     toast(ok ? 'IDENTITY EXPORTED — GUARD THAT FILE' : 'EXPORT CANCELLED')
   }
   document.getElementById('s-restore').onclick = async () => {
-    const k = prompt('Paste the 64-char PRIMARY KEY from your backup file.\nOnly works before this identity has posted anything.')
+    const k = prompt(tr('Paste the 64-char PRIMARY KEY from your backup file. Only works before this identity has posted anything.'))
     if (!k) return
     try {
       const r = await window.ember.restoreIdentity(k.trim())
@@ -1840,6 +2074,122 @@ async function renderSettings () {
 }
 
 function applyTheme (t) { document.body.dataset.theme = t }
+
+function wireTasteSettings (page) {
+  const sw = (id, on) => `<div class="switch ${on?'on':''}" id="${id}"><div class="knob"></div></div>`
+  page.querySelectorAll('[data-ui]').forEach(b => b.onclick = async () => {
+    const l = b.dataset.ui; if (l === LANG) return
+    await window.ember.tasteSet({ uiLang: l })
+    try { localStorage.setItem('emberLang', l); sessionStorage.setItem('emberView', 'settings') } catch {}
+    if (window.ember.reloadUi) window.ember.reloadUi(); else location.reload()
+  })
+  page.querySelectorAll('[data-rd]').forEach(b => b.onclick = async () => {
+    b.classList.toggle('on')
+    const langs = [...page.querySelectorAll('[data-rd].on')].map(x => x.dataset.rd)
+    if (!langs.length) { b.classList.add('on'); return }
+    TASTE = await window.ember.tasteSet({ readLangs: langs })
+  })
+  page.querySelectorAll('[data-tp]').forEach(b => b.onclick = async () => {
+    b.classList.toggle('on')
+    TASTE = await window.ember.tasteSet({ topics: [...page.querySelectorAll('[data-tp].on')].map(x => x.dataset.tp) })
+    if (VIEW === 'settings') toast('ROOMS UPDATED')
+  })
+  $('#s-topictextset').onclick = async () => { TASTE = await window.ember.tasteSet({ topicText: $('#s-topictext').value.trim() }); toast('ROOMS UPDATED') }
+  $('#s-onlylangs').onclick = async (e) => { const on = !e.currentTarget.classList.contains('on'); e.currentTarget.classList.toggle('on', on); TASTE = await window.ember.tasteSet({ onlyMyLangs: on }) }
+  $('#s-fires').onclick = async (e) => { const on = !e.currentTarget.classList.contains('on'); e.currentTarget.classList.toggle('on', on); TASTE = await window.ember.tasteSet({ campfires: on }) }
+  page.querySelectorAll('[data-term]').forEach(b => b.onclick = async () => { await window.ember.tasteForget(b.dataset.term); b.remove(); toast('REMOVED FROM YOUR COMPASS') })
+  $('#s-tastereset').onclick = async () => {
+    if (!confirm(tr('Forget everything the compass learned? Your topics stay.'))) return
+    await window.ember.tasteReset(); toast('COMPASS RESET'); renderSettings()
+  }
+  // circle moderation
+  const drawMod = (m) => {
+    if (!$('#m-pub')) return
+    $('#m-pub').innerHTML = sw('m-pubsw', m.publishBlocklist)
+    $('#m-circle').innerHTML = sw('m-circlesw', m.circleSignals)
+    $('#m-pubsw').onclick = async (e) => { const on = !e.currentTarget.classList.contains('on'); e.currentTarget.classList.toggle('on', on); drawMod(await window.ember.modSet({ publishBlocklist: on })); toast(on ? 'BLOCKLIST SHARED' : 'BLOCKLIST PRIVATE') }
+    $('#m-circlesw').onclick = async (e) => { const on = !e.currentTarget.classList.contains('on'); e.currentTarget.classList.toggle('on', on); drawMod(await window.ember.modSet({ circleSignals: on })) }
+    const box = $('#m-subs')
+    box.innerHTML = (m.subs.length ? '' : '<div class="sd">no subscriptions.</div>') + m.subs.map(x => `
+      <div class="followrow"><span class="swatch"></span><span class="k" title="${x.key}">${esc(x.name || x.key.slice(0, 10) + '…')} · ${x.count} keys</span><span class="x" data-un="${x.key}" title="unsubscribe">×</span></div>`).join('') +
+      `<div class="sd" style="margin-top:8px">${m.listHidden} hidden by your lists · ${m.circleHidden} hidden and ${m.circleSoft} ranked down by your circle</div>`
+    box.querySelectorAll('[data-un]').forEach(x => x.onclick = async () => drawMod(await window.ember.modUnsub(x.dataset.un)))
+  }
+  $('#m-subbtn').onclick = async () => {
+    const k = keyFrom($('#m-subkey').value)
+    if (!k) { toast('THAT ISN\'T A KEY'); return }
+    try { drawMod(await window.ember.modSub(k)); $('#m-subkey').value = ''; toast('SUBSCRIBED') } catch (e) { toast(String(e.message || e).replace(/^.*Error:\s*/, '').toUpperCase().slice(0, 80)) }
+  }
+  window.ember.modState().then(drawMod)
+}
+
+/* ============ CAMPFIRES ============ */
+let FIRE_ACTIVE = null
+async function renderFires () {
+  const page = $('#firepage')
+  if (FIRE_ACTIVE) return renderFireChat()
+  const r = await window.ember.firesList()
+  await loadTaste()
+  const head = `<div class="ptabs"><div class="ptab on">CAMPFIRES</div><div class="ptab sub">LIVE ROOMS THAT LIGHT WHEN 3+ PEOPLE SHARE A TOPIC</div></div>`
+  if (!r.on) { page.innerHTML = head + `<div class="empty">campfires are off. turn them on in SETUP.</div>`; return }
+  if (!r.fires.length) { page.innerHTML = head + `<div class="empty">pick a few topics in SETUP: a campfire lights when you and two others sit in the same topic room at the same time.</div>`; return }
+  page.innerHTML = head + `<div class="firenote">nothing said at a fire is stored anywhere. when it goes out, its words go with it.</div>`
+  for (const f of r.fires) {
+    const row = document.createElement('div'); row.className = 'firerow' + (f.lit ? ' lit' : '')
+    const others = f.people - 1
+    const status = f.lit ? `LIT · ${f.people} HERE` : others ? 'ONE OTHER HERE · WAITING FOR ONE MORE' : 'WAITING FOR 2 MORE'
+    row.innerHTML = `<div class="flame"></div><div class="fl"><div class="ft" data-noi18n>${esc(topicLabel(f.fire))}</div>
+      <div class="fd"><span>${status}</span>${f.last ? ` · <span data-noi18n>${esc(f.last.name || '')}: ${esc(f.last.text.slice(0, 60))}</span>` : ''}</div></div>
+      ${f.lit ? '<button class="btn solid">JOIN →</button>' : ''}`
+    row.onclick = () => { if (!f.lit) { toast('NOT LIT YET · IT NEEDS 3 PEOPLE'); return } FIRE_ACTIVE = f.fire; renderFireChat() }
+    page.appendChild(row)
+  }
+}
+async function renderFireChat () {
+  const page = $('#firepage'), fire = FIRE_ACTIVE
+  const r = await window.ember.firesList()
+  const f = r.fires.find(x => x.fire === fire)
+  if (!f || !f.lit) { FIRE_ACTIVE = null; toast('THE FIRE WENT OUT'); return renderFires() }
+  const msgs = await window.ember.fireMessages(fire)
+  const keepInput = $('#fireText') ? $('#fireText').value : ''
+  page.innerHTML = `<div class="ptabs"><div class="ptab" id="fireBack" style="cursor:pointer">←</div><div class="ptab on" data-noi18n>${esc(topicLabel(fire))}</div><div class="ptab sub">${f.people} HERE</div></div>
+    <div class="firechat"><div class="firemsgs" id="fireMsgs"></div>
+    <div class="fireinput"><input id="fireText" maxlength="400" placeholder="say something to the fire…" autocomplete="off"><button class="btn solid" id="fireSend">SEND</button></div></div>`
+  const box = $('#fireMsgs')
+  box.innerHTML = msgs.length ? msgs.map(m => `<div class="fmsg ${m.mine ? 'mine' : ''}"><span class="fwho" data-p="${attr(m.author)}">${esc(m.mine ? nameFor(ME.key) : (m.name || m.author.slice(0, 8)))}</span><span class="fts">${ago(m.ts)}${m.verified ? '' : ' · UNCONFIRMED'}</span><div class="fmtext">${mdRender(m.text)}</div></div>`).join('')
+    : `<div class="empty"><span>the fire is lit. say hi to</span> ${f.names.map(n => `<span data-noi18n>${esc(n.name || n.key.slice(0, 8))}</span>`).join(', ')}</div>`
+  box.scrollTop = box.scrollHeight
+  box.querySelectorAll('.fwho').forEach(w => w.onclick = () => openProfile(w.dataset.p))
+  $('#fireBack').onclick = () => { FIRE_ACTIVE = null; renderFires() }
+  const input = $('#fireText'); input.value = keepInput; input.focus()
+  const send = async () => {
+    const t = input.value.trim(); if (!t) return
+    input.value = ''
+    try { await window.ember.fireSend(fire, t) } catch { toast('THE FIRE WENT OUT') }
+    renderFireChat()
+  }
+  $('#fireSend').onclick = send
+  input.onkeydown = e => { if (e.key === 'Enter') send() }
+}
+window.ember.onFiresUpdated && window.ember.onFiresUpdated(async (ev) => {
+  if (VIEW === 'fires') { if (!FIRE_ACTIVE || !ev.fires.length || ev.fires.includes(FIRE_ACTIVE) || ev.lit) renderFires() }
+  if (ev.lit) {
+    $('#dot-fires').classList.toggle('show', VIEW !== 'fires')
+    toast(tr('▲ A CAMPFIRE LIT UP:') + ' ' + topicLabel(ev.lit))
+  }
+})
+
+/* ============ RESTORE ============ */
+function showRestore (pending) { $('#restoreBar').classList.toggle('show', !!pending) }
+$('#restoreSkip').onclick = async () => {
+  if (!confirm(tr('Only do this if the restored identity never posted anything. If it did, starting now splits its history and followers will reject the new posts.'))) return
+  await window.ember.restoreSkip(); showRestore(false); toast('READY · YOU CAN POST')
+}
+window.ember.onRestoreState && window.ember.onRestoreState(s => { showRestore(s.pending); if (!s.pending) { toast('YOUR HISTORY IS BACK'); refresh() } })
+// any write attempted while the log is still downloading lands here
+addEventListener('unhandledrejection', e => {
+  if (String(e.reason && e.reason.message || e.reason).includes('RESTORE_PENDING')) { e.preventDefault(); showRestore(true); toast('STILL RESTORING · POSTING RESUMES WHEN YOUR HISTORY ARRIVES') }
+})
 
 /* ============ PROFILE PAGE ============ */
 
@@ -1945,6 +2295,7 @@ async function refresh () {
     return
   }
   renderTopAvatar()
+  showRestore(ME.restorePending)
   const sl = await window.ember.savedList()
   SAVED_IDS = new Set(sl.map(a => a.author+':'+a.seq))
   DATA = await window.ember.timeline()
@@ -2051,7 +2402,7 @@ async function renderStories () {
     el.className = 'story unseen'
     const av = avatarFor(g.author)
     el.innerHTML = `<div class="sav">${av?`<img src="${safeSrc(av)}" alt="">`:esc(nameFor(g.author)[0]||'?')}</div>
-      <div class="sn">${esc(nameFor(g.author))}</div>`
+      <div class="sn" data-noi18n>${esc(nameFor(g.author))}</div>`
     el.onclick = () => openStories(g)
     rail.appendChild(el)
   }
@@ -2362,11 +2713,46 @@ window.ember.onBuckets(n => { NET.buckets=n; netRender() })
 
 /* ============ ONBOARDING ============ */
 
-let OB_PFP = null
+let OB_PFP = null, OB_UPGRADE = false
 function obGo (n) {
   document.querySelectorAll('.obstep').forEach(s => s.classList.remove('on'))
   document.getElementById('ob' + n).classList.add('on')
+  $('.obbox').classList.toggle('wide', n === 'T' || n === 0)
   if (n === 3) $('#obKey').textContent = ME ? ME.key : '…'
+  if (n === 'T') drawObTopics()
+}
+// step 0: interface language + languages I read (each shown in its own script)
+let OB_LANG = null, OB_READ = new Set()
+function drawObLangs () {
+  if (!OB_LANG) { OB_LANG = TASTE.uiLang || guessLang(); OB_READ = new Set(TASTE.readLangs && TASTE.readLangs.length && TASTE.uiLang ? TASTE.readLangs : [OB_LANG]) }
+  $('#obLangs').innerHTML = Object.entries(UI_LANGS).map(([k, v]) => `<button class="langbtn ${k===OB_LANG?'on':''}" data-l="${k}" data-noi18n>${v[0]}<small>${k.toUpperCase()}</small></button>`).join('')
+  $('#obRead').innerHTML = Object.entries(UI_LANGS).map(([k, v]) => `<button class="chip ${OB_READ.has(k)?'on':''}" data-r="${k}" data-noi18n>${v[1]}</button>`).join('')
+  const READ = { en: 'I ALSO READ', fr: 'JE LIS AUSSI', zh: '我也能读', ar: 'أقرأ أيضًا' }
+  const GO = { en: 'CONTINUE →', fr: 'CONTINUER →', zh: '继续 →', ar: '← متابعة' }
+  $('#obReadLabel').textContent = READ[OB_LANG]; $('#obReadLabel').dataset.noi18n = ''
+  $('#obLangGo').textContent = GO[OB_LANG]; $('#obLangGo').dataset.noi18n = ''
+  document.documentElement.dir = OB_LANG === 'ar' ? 'rtl' : 'ltr'
+  $('#obLangs').querySelectorAll('[data-l]').forEach(b => b.onclick = () => { const was = OB_LANG; OB_LANG = b.dataset.l; OB_READ.delete(was); OB_READ.add(OB_LANG); drawObLangs() })
+  $('#obRead').querySelectorAll('[data-r]').forEach(b => b.onclick = () => { const l = b.dataset.r; if (l === OB_LANG) return; OB_READ.has(l) ? OB_READ.delete(l) : OB_READ.add(l); drawObLangs() })
+}
+$('#obLangGo').onclick = async () => {
+  delete $('#obLangGo').dataset.noi18n; $('#obLangGo').textContent = 'CONTINUE →'
+  delete $('#obReadLabel').dataset.noi18n; $('#obReadLabel').textContent = 'I ALSO READ'
+  TASTE = await window.ember.tasteSet({ uiLang: OB_LANG, readLangs: [...OB_READ] })
+  await setLanguage(OB_LANG)
+  obGo(OB_UPGRADE ? 'T' : 1)
+}
+function drawObTopics () {
+  const sel = new Set(TASTE.topics)
+  $('#obTopics').innerHTML = TASTE.catalog.map(t => `<button class="chip ${sel.has(t.id)?'on':''}" data-tp="${t.id}" data-noi18n>${esc(topicLabel(t.id))}</button>`).join('')
+  $('#obTopics').querySelectorAll('[data-tp]').forEach(b => b.onclick = () => b.classList.toggle('on'))
+  $('#obTopicText').value = TASTE.topicText || ''
+}
+$('#obTopicsGo').onclick = async () => {
+  const topics = [...document.querySelectorAll('#obTopics [data-tp].on')].map(b => b.dataset.tp)
+  TASTE = await window.ember.tasteSet({ topics, topicText: $('#obTopicText').value.trim(), onboarded: true })
+  if (OB_UPGRADE) finishOnboard()
+  else obGo(3)
 }
 $('#obPfp').onclick = () => $('#obPfpInput').click()
 $('#obPfpInput').onchange = async e => {
@@ -2383,7 +2769,7 @@ $('#obSave').onclick = async () => {
   if (!name) { toast('PICK A NAME — IT TRAVELS WITH YOUR POSTS'); return }
   await window.ember.setProfile({ name, bio: '', status: $('#obStatus').value.trim(), avatar: OB_PFP })
   await refresh()
-  obGo(3)
+  obGo('T')
 }
 $('#obKey').onclick = () => { navigator.clipboard.writeText(ME.key); toast('KEY COPIED') }
 $('#obExport').onclick = async () => {
@@ -2391,16 +2777,39 @@ $('#obExport').onclick = async () => {
   if (ok) { toast('BACKUP SAVED — GUARD IT'); obGo(4) }
 }
 $('#obSkip').onclick = () => obGo(4)
-function finishOnboard () { $('#onboard').classList.remove('open'); renderStories() }
-function maybeOnboard () {
+function finishOnboard () {
+  $('#onboard').classList.remove('open'); renderStories()
+  window.ember.tasteSet({ onboarded: true })
+  if (VIEW === 'discover') renderDiscover()
+}
+async function maybeOnboard () {
   if (ME && ME.booting) return // wait for the engine before judging the profile
-  if (!ME || !ME.profile || !ME.profile.name) $('#onboard').classList.add('open')
+  if ($('#onboard').classList.contains('open')) return
+  await loadTaste()
+  const fresh = !ME || !ME.profile || !ME.profile.name
+  if (!fresh && TASTE.onboarded) return
+  // people upgrading from 2.7 get the two new steps only: language, then topics
+  OB_UPGRADE = !fresh
+  drawObLangs(); obGo(0)
+  $('#onboard').classList.add('open')
 }
 
 /* ============ BOOT ============ */
 
 window.ember.getSettings().then(s => applyTheme(s.theme || 'paper'))
-refresh().then(() => { FIRST_LOAD = false; renderStories(); renderInboxRail(); maybeOnboard() })
+;(async () => {
+  // language first, so the first paint is already in it
+  let lang = 'en'
+  try { lang = localStorage.getItem('emberLang') || 'en' } catch {}
+  await loadTaste()
+  if (TASTE.uiLang) lang = TASTE.uiLang
+  await setLanguage(lang)
+  await refresh()
+  FIRST_LOAD = false; renderStories(); renderInboxRail(); maybeOnboard()
+  let back = null
+  try { back = sessionStorage.getItem('emberView'); sessionStorage.removeItem('emberView') } catch {}
+  if (back === 'settings') go('settings')
+})()
 setInterval(renderInboxRail, 30000)
 setInterval(renderStories, 60000)
 setInterval(async () => {

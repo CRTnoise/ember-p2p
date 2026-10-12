@@ -275,19 +275,47 @@ class Nearby {
     this.area.on = true; this.area.error = null
     const swarm = new Hyperswarm(typeof this.swarmOpts === 'function' ? this.swarmOpts() : this.swarmOpts)
     this.area.swarm = swarm
+    let lastKick = 0
     swarm.on('connection', (socket) => {
       this.area.sockets.add(socket)
-      socket.on('close', () => { this.area.sockets.delete(socket); this.onChange(null) })
+      // Two peers dialling each other at the same moment can leave one side with
+      // a connection the other already dropped: nothing ever arrives on it, so
+      // their cards (and their bye) never would either. Everyone sends a card the
+      // moment a connection opens: silence after 4 s means a dead line. Drop it
+      // and look the area up again so a working one replaces it.
+      const zombie = setTimeout(() => {
+        if (socket._heard || this.area.swarm !== swarm) return
+        socket.destroy()
+        if (Date.now() - lastKick > 10_000) { lastKick = Date.now(); relook() }
+      }, 4000)
+      socket.on('close', () => {
+        clearTimeout(zombie)
+        this.area.sockets.delete(socket); this.onChange(null)
+        // fallback for a lost 'bye': once the last connection that carried
+        // someone's card has been gone for a few seconds (a connection being
+        // swapped for a fresh one doesn't count), they're gone too
+        const k = socket._nearKey
+        if (k) setTimeout(() => {
+          const p = this.people.get(k)
+          if (this.area.swarm !== swarm || !p || !p.area || [...this.area.sockets].some(x => x._nearKey === k)) return
+          delete p.area; if (!p.lan) this.people.delete(k)
+          this.onChange(null)
+        }, 3000)
+      })
       socket.on('error', () => {})
       let buf = ''; let n = 0
       socket.on('data', (chunk) => {
+        socket._heard = true
         buf += chunk.toString()
         if (buf.length > 16384) { socket.destroy(); return }
         let nl
         while ((nl = buf.indexOf('\n')) >= 0) {
           const line = buf.slice(0, nl); buf = buf.slice(nl + 1)
           if (++n > 200) { socket.destroy(); return } // a card every 2 min: 200 is days of honest traffic
-          try { const m = JSON.parse(line); if (m && m.t === 'near') this.receive(m.c, 'area') } catch {}
+          try {
+            const m = JSON.parse(line)
+            if (m && m.t === 'near') { this.receive(m.c, 'area'); if (m.c && m.c.via === 'area' && this.people.get(m.c.key)) socket._nearKey = m.c.key }
+          } catch {}
         }
       })
       this.sendArea(socket)

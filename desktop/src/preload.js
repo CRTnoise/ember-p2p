@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('ember', {
   winMin: () => ipcRenderer.invoke('win-min'),
   winMax: () => ipcRenderer.invoke('win-max'),
   winClose: () => ipcRenderer.invoke('win-close'),
+  reloadUi: () => ipcRenderer.invoke('reload-ui'),
   onEngineReady: (cb) => ipcRenderer.on('engine-ready', () => cb()),
   dmSend: (to, text) => ipcRenderer.invoke('dm-send', { to, text }),
   dmOpen: (key) => ipcRenderer.invoke('dm-open', { key }),
@@ -64,5 +65,24 @@ contextBridge.exposeInMainWorld('ember', {
   nearSearch: (q) => ipcRenderer.invoke('near-search', { q }),
   nearLocate: (radius) => ipcRenderer.invoke('near-locate', { radius }),
   nearSetHidden: (hidden) => ipcRenderer.invoke('near-set-hidden', { hidden }),
-  onNearUpdated: (cb) => ipcRenderer.on('near-updated', (_e, hit) => cb(hit))
+  onNearUpdated: (cb) => ipcRenderer.on('near-updated', (_e, hit) => cb(hit)),
+  // v2.8: restore sync, taste & languages, circle moderation, campfires
+  restoreSkip: () => ipcRenderer.invoke('restore-skip'),
+  onRestoreState: (cb) => ipcRenderer.on('restore-state', (_e, s) => cb(s)),
+  tasteState: () => ipcRenderer.invoke('taste-state'),
+  tasteSet: (patch) => ipcRenderer.invoke('taste-set', patch),
+  tasteForget: (term) => ipcRenderer.invoke('taste-forget', { term }),
+  tasteReset: () => ipcRenderer.invoke('taste-reset'),
+  notInterested: (author, seq) => ipcRenderer.invoke('not-interested', { author, seq }),
+  i18n: (lang) => ipcRenderer.invoke('i18n', { lang }),
+  modState: () => ipcRenderer.invoke('mod-state'),
+  modSet: (patch) => ipcRenderer.invoke('mod-set', patch),
+  modSub: (key) => ipcRenderer.invoke('mod-sub', { key }),
+  modUnsub: (key) => ipcRenderer.invoke('mod-unsub', { key }),
+  onModUpdated: (cb) => ipcRenderer.on('mod-updated', () => cb()),
+  firesList: () => ipcRenderer.invoke('fires-list'),
+  fireMessages: (fire) => ipcRenderer.invoke('fire-messages', { fire }),
+  fireSend: (fire, text) => ipcRenderer.invoke('fire-send', { fire, text }),
+  onFiresUpdated: (cb) => ipcRenderer.on('fires-updated', (_e, ev) => cb(ev)),
+  onCommonsState: (cb) => ipcRenderer.on('commons-state', (_e, on) => cb(on))
 })

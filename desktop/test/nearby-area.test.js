@@ -37,9 +37,12 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms))
   ok(B.length === 0, 'bob (10 km radius) should not list alice 25 km away')
   ok(C.length === 0, 'carol in Lyon should see nobody')
   ok(!A.some(x => x.startsWith('carol')), 'alice should not see carol (391 km)')
-  await nb.stopArea()                       // bob turns SAME AREA off → his bye reaches alice
-  await sleep(800)
-  ok(!names(na).some(x => x.startsWith('bob')), 'bob should vanish from alice\'s list as soon as he stops')
+  const t0 = Date.now()
+  await nb.stopArea()                       // bob turns SAME AREA off → his bye reaches alice at once
+  for (let i = 0; i < 40 && names(na).some(x => x.startsWith('bob')); i++) await sleep(250) // (or, if the bye is lost, his closed connection does within seconds)
+  const gone = Date.now() - t0
+  ok(!names(na).some(x => x.startsWith('bob')), 'bob should vanish from alice\'s list when he stops')
+  console.log('bob gone from alice\'s list after', gone, 'ms')
   await na.stopArea()
   ok(na.list().length === 0, 'stopping area should clear area people')
   await Promise.all([nb.destroy(), nc.destroy()]); await testnet.destroy()

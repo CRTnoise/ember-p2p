@@ -1,0 +1,668 @@
+{
+ "_": "Topic catalog for the first-run picker and SETUP. Each topic's seeds are run through the same meaning fingerprint as posts (discovery.js), so picking a topic joins the buckets where posts about it land. One seed per reading language: posts in Chinese or Arabic don't share n-grams with English seeds.",
+ "topics": [
+  {
+   "id": "music",
+   "label": {
+    "en": "Music",
+    "fr": "Musique",
+    "zh": "音乐",
+    "ar": "موسيقى"
+   },
+   "seeds": {
+    "en": "music songs album artist concert guitar beats producing listening playlist",
+    "fr": "musique chansons album artiste concert guitare son production écoute playlist",
+    "zh": "音乐 歌曲 专辑 歌手 演唱会 吉他 编曲 制作 听歌 歌单",
+    "ar": "موسيقى أغاني ألبوم فنان حفلة غيتار إيقاع إنتاج استماع قائمة تشغيل"
+   },
+   "keys": [
+    "album",
+    "guitar",
+    "playlist",
+    "concert",
+    "song",
+    "songs",
+    "singer",
+    "spotify",
+    "音乐",
+    "歌曲",
+    "موسيقى",
+    "أغنية",
+    "rehearsal",
+    "mixtape",
+    "synth",
+    "musique",
+    "أغاني"
+   ]
+  },
+  {
+   "id": "art",
+   "label": {
+    "en": "Art & illustration",
+    "fr": "Art & illustration",
+    "zh": "艺术与插画",
+    "ar": "فن ورسم"
+   },
+   "seeds": {
+    "en": "art drawing illustration painting sketch artist canvas ink colors print",
+    "fr": "art dessin illustration peinture croquis artiste toile encre couleurs gravure",
+    "zh": "艺术 绘画 插画 油画 素描 画家 画布 水墨 色彩 版画",
+    "ar": "فن رسم توضيح لوحة رسم تخطيطي فنان قماش حبر ألوان طباعة"
+   },
+   "keys": [
+    "illustration",
+    "painting",
+    "drawing",
+    "sketch",
+    "sketchbook",
+    "watercolor",
+    "插画",
+    "绘画",
+    "رسم",
+    "لوحة",
+    "risograph",
+    "riso",
+    "linocut",
+    "printmaking",
+    "zine",
+    "zines"
+   ]
+  },
+  {
+   "id": "pixel",
+   "label": {
+    "en": "Pixel art & retro",
+    "fr": "Pixel art & rétro",
+    "zh": "像素艺术与复古",
+    "ar": "فن البكسل والريترو"
+   },
+   "seeds": {
+    "en": "pixel art sprites palette retro games 8-bit 16-bit aseprite tiles animation",
+    "fr": "pixel art sprites palette jeux rétro 8-bit 16-bit aseprite tuiles animation",
+    "zh": "像素画 像素艺术 精灵图 调色板 复古游戏 八位 十六位 动画",
+    "ar": "فن البكسل رسوم متحركة لوحة ألوان ألعاب قديمة ريترو ثمانية بت"
+   },
+   "keys": [
+    "pixel",
+    "pixels",
+    "sprite",
+    "sprites",
+    "aseprite",
+    "8-bit",
+    "16-bit",
+    "pixelart",
+    "像素",
+    "بكسل"
+   ]
+  },
+  {
+   "id": "games",
+   "label": {
+    "en": "Video games",
+    "fr": "Jeux vidéo",
+    "zh": "电子游戏",
+    "ar": "ألعاب الفيديو"
+   },
+   "seeds": {
+    "en": "video games gaming playing console pc steam nintendo rpg multiplayer indie",
+    "fr": "jeux vidéo gaming jouer console pc steam nintendo rpg multijoueur indé",
+    "zh": "电子游戏 游戏 玩家 主机 电脑游戏 独立游戏 角色扮演 多人联机",
+    "ar": "ألعاب الفيديو ألعاب لاعب جهاز ألعاب كمبيوتر ألعاب مستقلة لعب جماعي"
+   },
+   "keys": [
+    "gaming",
+    "gamer",
+    "steam",
+    "nintendo",
+    "playstation",
+    "xbox",
+    "rpg",
+    "speedrun",
+    "游戏",
+    "ألعاب"
+   ]
+  },
+  {
+   "id": "film",
+   "label": {
+    "en": "Film & series",
+    "fr": "Cinéma & séries",
+    "zh": "电影与剧集",
+    "ar": "أفلام ومسلسلات"
+   },
+   "seeds": {
+    "en": "film movies cinema series director screenplay scene watching episode actor",
+    "fr": "film cinéma séries réalisateur scénario scène regarder épisode acteur",
+    "zh": "电影 影院 电视剧 导演 剧本 镜头 追剧 剧集 演员",
+    "ar": "أفلام سينما مسلسلات مخرج سيناريو مشهد مشاهدة حلقة ممثل"
+   },
+   "keys": [
+    "movie",
+    "movies",
+    "cinema",
+    "netflix",
+    "screenplay",
+    "filmmaker",
+    "电影",
+    "فيلم",
+    "سينما"
+   ]
+  },
+  {
+   "id": "books",
+   "label": {
+    "en": "Books & writing",
+    "fr": "Livres & écriture",
+    "zh": "读书与写作",
+    "ar": "كتب وكتابة"
+   },
+   "seeds": {
+    "en": "books reading novel writing author poetry story chapter fiction writer",
+    "fr": "livres lecture roman écriture auteur poésie histoire chapitre fiction écrivain",
+    "zh": "读书 阅读 小说 写作 作者 诗歌 故事 章节 作家",
+    "ar": "كتب قراءة رواية كتابة مؤلف شعر قصة فصل خيال كاتب"
+   },
+   "keys": [
+    "novel",
+    "novels",
+    "poetry",
+    "poem",
+    "bookshelf",
+    "小说",
+    "读书",
+    "رواية",
+    "roman",
+    "romans",
+    "littérature",
+    "poésie",
+    "livre",
+    "livres"
+   ]
+  },
+  {
+   "id": "photo",
+   "label": {
+    "en": "Photography",
+    "fr": "Photographie",
+    "zh": "摄影",
+    "ar": "تصوير"
+   },
+   "seeds": {
+    "en": "photography photo camera lens film photography street light shot portrait",
+    "fr": "photographie photo appareil objectif argentique rue lumière cliché portrait",
+    "zh": "摄影 照片 相机 镜头 胶片 街拍 光线 人像",
+    "ar": "تصوير صورة كاميرا عدسة فيلم تصوير الشارع ضوء لقطة بورتريه"
+   },
+   "keys": [
+    "photography",
+    "photographer",
+    "camera",
+    "lens",
+    "35mm",
+    "摄影",
+    "تصوير",
+    "كاميرا"
+   ]
+  },
+  {
+   "id": "code",
+   "label": {
+    "en": "Programming",
+    "fr": "Programmation",
+    "zh": "编程",
+    "ar": "برمجة"
+   },
+   "seeds": {
+    "en": "programming code developer javascript python rust bug compiler software api",
+    "fr": "programmation code développeur javascript python rust bug compilateur logiciel api",
+    "zh": "编程 代码 开发者 程序员 软件 调试 编译器 接口",
+    "ar": "برمجة كود مطور جافاسكربت بايثون خطأ برمجي مترجم برمجيات واجهة"
+   },
+   "keys": [
+    "programming",
+    "javascript",
+    "python",
+    "rust",
+    "typescript",
+    "compiler",
+    "debugging",
+    "coding",
+    "编程",
+    "代码",
+    "برمجة"
+   ]
+  },
+  {
+   "id": "ai",
+   "label": {
+    "en": "AI & machine learning",
+    "fr": "IA & machine learning",
+    "zh": "人工智能与机器学习",
+    "ar": "الذكاء الاصطناعي"
+   },
+   "seeds": {
+    "en": "ai artificial intelligence machine learning llm models agents neural networks training inference",
+    "fr": "ia intelligence artificielle apprentissage automatique llm modèles agents réseaux de neurones entraînement",
+    "zh": "人工智能 机器学习 大模型 模型 智能体 神经网络 训练 推理",
+    "ar": "الذكاء الاصطناعي تعلم الآلة نماذج لغوية وكلاء شبكات عصبية تدريب"
+   },
+   "keys": [
+    "ai",
+    "llm",
+    "llms",
+    "gpt",
+    "chatgpt",
+    "deepseek",
+    "claude",
+    "gemini",
+    "transformer",
+    "embeddings",
+    "quantized",
+    "inference",
+    "大模型",
+    "人工智能",
+    "ذكاء",
+    "mcp",
+    "agents",
+    "agentic",
+    "fine-tuning",
+    "evals"
+   ]
+  },
+  {
+   "id": "privacy",
+   "label": {
+    "en": "Privacy & security",
+    "fr": "Vie privée & sécurité",
+    "zh": "隐私与安全",
+    "ar": "الخصوصية والأمان"
+   },
+   "seeds": {
+    "en": "privacy security encryption surveillance data tracking hacking cybersecurity anonymity",
+    "fr": "vie privée sécurité chiffrement surveillance données pistage piratage cybersécurité anonymat",
+    "zh": "隐私 安全 加密 监控 数据 追踪 黑客 网络安全 匿名",
+    "ar": "خصوصية أمان تشفير مراقبة بيانات تتبع اختراق أمن سيبراني إخفاء الهوية"
+   },
+   "keys": [
+    "privacy",
+    "encryption",
+    "encrypted",
+    "surveillance",
+    "tracking",
+    "e2e",
+    "cybersecurity",
+    "隐私",
+    "加密",
+    "خصوصية",
+    "تشفير"
+   ]
+  },
+  {
+   "id": "oss",
+   "label": {
+    "en": "Open source & Linux",
+    "fr": "Open source & Linux",
+    "zh": "开源与 Linux",
+    "ar": "المصدر المفتوح ولينكس"
+   },
+   "seeds": {
+    "en": "open source linux free software github self-hosted distro terminal decentralized p2p",
+    "fr": "open source linux logiciel libre github auto-hébergé distribution terminal décentralisé p2p",
+    "zh": "开源 Linux 自由软件 GitHub 自托管 发行版 终端 去中心化 点对点",
+    "ar": "مصدر مفتوح لينكس برمجيات حرة استضافة ذاتية توزيعة طرفية لا مركزية"
+   },
+   "keys": [
+    "linux",
+    "foss",
+    "opensource",
+    "github",
+    "p2p",
+    "peer",
+    "decentralized",
+    "decentralised",
+    "distributed",
+    "self-hosted",
+    "selfhosted",
+    "开源",
+    "去中心化",
+    "لينكس"
+   ]
+  },
+  {
+   "id": "science",
+   "label": {
+    "en": "Science & space",
+    "fr": "Sciences & espace",
+    "zh": "科学与太空",
+    "ar": "العلوم والفضاء"
+   },
+   "seeds": {
+    "en": "science physics space astronomy planets research biology chemistry universe stars",
+    "fr": "science physique espace astronomie planètes recherche biologie chimie univers étoiles",
+    "zh": "科学 物理 太空 天文 行星 研究 生物 化学 宇宙 星星",
+    "ar": "علوم فيزياء فضاء فلك كواكب بحث أحياء كيمياء كون نجوم"
+   },
+   "keys": [
+    "physics",
+    "astronomy",
+    "nasa",
+    "telescope",
+    "quantum",
+    "biology",
+    "chemistry",
+    "科学",
+    "物理",
+    "天文",
+    "فيزياء",
+    "فلك"
+   ]
+  },
+  {
+   "id": "philosophy",
+   "label": {
+    "en": "Philosophy",
+    "fr": "Philosophie",
+    "zh": "哲学",
+    "ar": "فلسفة"
+   },
+   "seeds": {
+    "en": "philosophy meaning ethics existence consciousness thinking truth mind metaphysics",
+    "fr": "philosophie sens éthique existence conscience pensée vérité esprit métaphysique",
+    "zh": "哲学 意义 伦理 存在 意识 思考 真理 心灵 形而上学",
+    "ar": "فلسفة معنى أخلاق وجود وعي تفكير حقيقة عقل ميتافيزيقا"
+   },
+   "keys": [
+    "philosophy",
+    "philosopher",
+    "nietzsche",
+    "stoic",
+    "stoicism",
+    "existential",
+    "metaphysics",
+    "哲学",
+    "فلسفة"
+   ]
+  },
+  {
+   "id": "faith",
+   "label": {
+    "en": "Faith & spirituality",
+    "fr": "Foi & spiritualité",
+    "zh": "信仰与灵性",
+    "ar": "الإيمان والروحانية"
+   },
+   "seeds": {
+    "en": "faith spirituality religion prayer god belief soul theology meditation",
+    "fr": "foi spiritualité religion prière dieu croyance âme théologie méditation",
+    "zh": "信仰 灵性 宗教 祈祷 上帝 信念 灵魂 神学 冥想",
+    "ar": "إيمان روحانية دين صلاة الله عقيدة روح لاهوت تأمل"
+   },
+   "keys": [
+    "prayer",
+    "quran",
+    "bible",
+    "faith",
+    "spirituality",
+    "theology",
+    "islam",
+    "ramadan",
+    "信仰",
+    "祈祷",
+    "صلاة",
+    "قرآن",
+    "إيمان"
+   ]
+  },
+  {
+   "id": "history",
+   "label": {
+    "en": "History",
+    "fr": "Histoire",
+    "zh": "历史",
+    "ar": "تاريخ"
+   },
+   "seeds": {
+    "en": "history ancient empire war civilization archives century past historical",
+    "fr": "histoire antiquité empire guerre civilisation archives siècle passé historique",
+    "zh": "历史 古代 帝国 战争 文明 档案 世纪 过去",
+    "ar": "تاريخ قديم إمبراطورية حرب حضارة أرشيف قرن الماضي"
+   },
+   "keys": [
+    "history",
+    "historical",
+    "empire",
+    "ancient",
+    "medieval",
+    "历史",
+    "تاريخ"
+   ]
+  },
+  {
+   "id": "world",
+   "label": {
+    "en": "News & world",
+    "fr": "Actualité & monde",
+    "zh": "新闻与世界",
+    "ar": "أخبار وعالم"
+   },
+   "seeds": {
+    "en": "news world society economy countries politics election geopolitics",
+    "fr": "actualité monde société économie pays événements politique aujourd'hui",
+    "zh": "新闻 世界 社会 经济 国家 事件 时事 今天",
+    "ar": "أخبار عالم مجتمع اقتصاد دول أحداث سياسة اليوم"
+   },
+   "keys": [
+    "news",
+    "election",
+    "economy",
+    "geopolitics",
+    "新闻",
+    "أخبار"
+   ]
+  },
+  {
+   "id": "football",
+   "label": {
+    "en": "Football & sports",
+    "fr": "Foot & sport",
+    "zh": "足球与体育",
+    "ar": "كرة القدم والرياضة"
+   },
+   "seeds": {
+    "en": "football soccer match goal team league players sport basketball tennis",
+    "fr": "football foot match but équipe championnat joueurs sport basket tennis",
+    "zh": "足球 比赛 进球 球队 联赛 球员 体育 篮球 网球",
+    "ar": "كرة القدم مباراة هدف فريق دوري لاعبين رياضة كرة السلة تنس"
+   },
+   "keys": [
+    "football",
+    "soccer",
+    "goal",
+    "match",
+    "league",
+    "premier",
+    "laliga",
+    "足球",
+    "كرة",
+    "مباراة"
+   ]
+  },
+  {
+   "id": "fitness",
+   "label": {
+    "en": "Fitness & health",
+    "fr": "Sport & santé",
+    "zh": "健身与健康",
+    "ar": "اللياقة والصحة"
+   },
+   "seeds": {
+    "en": "fitness gym training workout running health strength nutrition sleep",
+    "fr": "fitness salle entraînement musculation course santé force nutrition sommeil",
+    "zh": "健身 健身房 训练 锻炼 跑步 健康 力量 营养 睡眠",
+    "ar": "لياقة نادي رياضي تدريب تمرين جري صحة قوة تغذية نوم"
+   },
+   "keys": [
+    "gym",
+    "workout",
+    "fitness",
+    "lifting",
+    "marathon",
+    "健身",
+    "لياقة"
+   ]
+  },
+  {
+   "id": "food",
+   "label": {
+    "en": "Cooking & food",
+    "fr": "Cuisine",
+    "zh": "美食与烹饪",
+    "ar": "طبخ وطعام"
+   },
+   "seeds": {
+    "en": "cooking food recipe kitchen bread spices dinner baking restaurant",
+    "fr": "cuisine nourriture recette four pain épices dîner pâtisserie restaurant",
+    "zh": "烹饪 美食 食谱 厨房 面包 香料 晚餐 烘焙 餐厅",
+    "ar": "طبخ طعام وصفة مطبخ خبز بهارات عشاء حلويات مطعم"
+   },
+   "keys": [
+    "recipe",
+    "cooking",
+    "baking",
+    "tajine",
+    "couscous",
+    "食谱",
+    "烹饪",
+    "طبخ",
+    "وصفة",
+    "做饭",
+    "下厨",
+    "菜谱",
+    "美食",
+    "cuisine",
+    "recette"
+   ]
+  },
+  {
+   "id": "travel",
+   "label": {
+    "en": "Travel",
+    "fr": "Voyage",
+    "zh": "旅行",
+    "ar": "سفر"
+   },
+   "seeds": {
+    "en": "travel trip city country journey flight backpacking discover places road",
+    "fr": "voyage séjour ville pays périple vol sac à dos découvrir lieux route",
+    "zh": "旅行 旅游 城市 国家 旅程 航班 背包 探索 地方",
+    "ar": "سفر رحلة مدينة بلد طيران مغامرة اكتشاف أماكن طريق"
+   },
+   "keys": [
+    "travel",
+    "traveling",
+    "travelling",
+    "trip",
+    "backpacking",
+    "旅行",
+    "سفر",
+    "رحلة"
+   ]
+  },
+  {
+   "id": "languages",
+   "label": {
+    "en": "Languages & learning",
+    "fr": "Langues & apprentissage",
+    "zh": "语言与学习",
+    "ar": "اللغات والتعلم"
+   },
+   "seeds": {
+    "en": "languages learning study vocabulary grammar german french english university",
+    "fr": "langues apprentissage étudier vocabulaire grammaire allemand anglais université",
+    "zh": "语言 学习 学外语 词汇 语法 德语 法语 英语 大学",
+    "ar": "لغات تعلم دراسة مفردات قواعد ألمانية فرنسية إنجليزية جامعة"
+   },
+   "keys": [
+    "vocabulary",
+    "grammar",
+    "duolingo",
+    "语法",
+    "外语",
+    "قواعد"
+   ]
+  },
+  {
+   "id": "anime",
+   "label": {
+    "en": "Anime & manga",
+    "fr": "Anime & manga",
+    "zh": "动漫",
+    "ar": "أنمي ومانغا"
+   },
+   "seeds": {
+    "en": "anime manga episode season characters arc otaku webtoon",
+    "fr": "anime manga épisode saison studio personnages arc otaku webtoon",
+    "zh": "动漫 动画 漫画 番剧 新番 角色 声优 二次元",
+    "ar": "أنمي مانغا حلقة موسم استوديو شخصيات قصة أوتاكو"
+   },
+   "keys": [
+    "anime",
+    "manga",
+    "webtoon",
+    "otaku",
+    "动漫",
+    "番剧",
+    "أنمي",
+    "مانغا"
+   ]
+  },
+  {
+   "id": "design",
+   "label": {
+    "en": "Design & UI",
+    "fr": "Design & UI",
+    "zh": "设计与界面",
+    "ar": "التصميم والواجهات"
+   },
+   "seeds": {
+    "en": "design ui ux interface typography layout figma branding product",
+    "fr": "design ui ux interface typographie mise en page figma identité visuelle produit",
+    "zh": "设计 界面 用户体验 字体 排版 品牌 产品设计",
+    "ar": "تصميم واجهة تجربة المستخدم خطوط تخطيط هوية بصرية منتج"
+   },
+   "keys": [
+    "figma",
+    "typography",
+    "ui",
+    "ux",
+    "branding",
+    "设计",
+    "تصميم"
+   ]
+  },
+  {
+   "id": "fashion",
+   "label": {
+    "en": "Fashion & streetwear",
+    "fr": "Mode & streetwear",
+    "zh": "时尚与潮牌",
+    "ar": "الموضة والملابس"
+   },
+   "seeds": {
+    "en": "fashion streetwear outfit clothes sneakers brand style drop",
+    "fr": "mode streetwear tenue vêtements baskets marque style collection",
+    "zh": "时尚 潮牌 穿搭 衣服 球鞋 品牌 风格",
+    "ar": "موضة ملابس شارع إطلالة أحذية رياضية علامة تجارية أسلوب"
+   },
+   "keys": [
+    "streetwear",
+    "sneakers",
+    "outfit",
+    "fashion",
+    "潮牌",
+    "穿搭",
+    "موضة"
+   ]
+  }
+ ]
+}

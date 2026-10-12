@@ -74,6 +74,12 @@ function sanitizeBlock (b) {
       return typeof b.key === 'string' && HEX64.test(b.key) ? { type: b.type, ts, key: b.key } : null
     case 'delete':
       return b.ref && nat(b.ref.seq) !== undefined ? { type: 'delete', ts, ref: { seq: b.ref.seq } } : null
+    case 'modlist': {
+      // a published blocklist: keys this person blocks, for people who chose to
+      // trust their judgement (subscriptions / circle signals). Capped, deduped.
+      const keys = Array.isArray(b.keys) ? [...new Set(b.keys.filter(k => typeof k === 'string' && HEX64.test(k)))].slice(0, 5000) : []
+      return { type: 'modlist', ts, keys }
+    }
     case 'vchunk':
       return typeof b.d === 'string' && b.d.length <= 70000 && B64.test(b.d) ? { type: 'vchunk', ts, d: b.d } : null
     default:
@@ -153,6 +159,23 @@ function cleanNear (c, now) {
   return out
 }
 
+// ---- campfires ----
+// A campfire is a live, temporary room that exists while 3+ people sit in the
+// same topic room. Messages are signed by the author's signer key and are never
+// stored: they live in memory while the fire burns.
+const FIRE_ID = /^[a-z0-9-]{1,32}$/
+function fireMsg (m) { return `ember/fire/1|${m.fire}|${m.author}|${m.edpk}|${m.name}|${m.ts}|${sha256hex(m.text)}` }
+function cleanFire (m, now) {
+  if (!m || typeof m !== 'object') return null
+  if (typeof m.fire !== 'string' || !FIRE_ID.test(m.fire)) return null
+  if (typeof m.author !== 'string' || !HEX64.test(m.author) || typeof m.edpk !== 'string' || !HEX64.test(m.edpk)) return null
+  if (typeof m.text !== 'string' || !m.text.trim() || m.text.length > 400) return null
+  if (typeof m.name !== 'string' || m.name.length > 40 || !NEAR_TEXT.test(m.name)) return null
+  if (!Number.isInteger(m.ts) || Math.abs(now - m.ts) > 15 * 60_000) return null
+  if (typeof m.sig !== 'string' || m.sig.length > 120 || !B64.test(m.sig)) return null
+  return { fire: m.fire, author: m.author, edpk: m.edpk, name: m.name, ts: m.ts, text: m.text, sig: m.sig }
+}
+
 // DM payloads are wrapped {k:'t'|'i'|'v', d}. Unwrap for previews/notifications.
 function dmPreview (raw) {
   try {
@@ -164,4 +187,4 @@ function dmPreview (raw) {
   return String(raw || '').slice(0, 140)
 }
 
-module.exports = { PROTOCOL_VERSION, HEX64, SAFE_IMG, sha256hex, cleanKey, safeImg, cleanRef, cleanVideoMeta, normKind, sanitizeBlock, annExtras, annMsgV1, annMsgV2, cleanAnnMedia, delMsg, dmProofMsg, dmPreview, makeNearCard, nearMsg, cleanNear }
+module.exports = { PROTOCOL_VERSION, HEX64, SAFE_IMG, sha256hex, cleanKey, safeImg, cleanRef, cleanVideoMeta, normKind, sanitizeBlock, annExtras, annMsgV1, annMsgV2, cleanAnnMedia, delMsg, dmProofMsg, dmPreview, makeNearCard, nearMsg, cleanNear, nearText, fireMsg, cleanFire }

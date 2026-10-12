@@ -12,6 +12,12 @@ can decide what to use it for.
 - **DM contents.** End-to-end encrypted (`crypto_box`, X25519 +
   XSalsa20-Poly1305), authenticated to the sender's published key. Queued
   messages are only handed to a peer that proves it holds the recipient's key.
+- **What you're into, mostly.** The compass (what Discover learned about you)
+  and the words you described yourself with stay on your machine and are never
+  sent. Campfires don't share them either.
+- **Your history after a restore.** A restored identity downloads its log
+  before it may write, so a restore can't fork your history (which would make
+  followers reject your new posts).
 - **The app itself from hostile content.** Everything read from other
   people's feeds is reduced to a whitelisted shape before use; media must be
   strict data URLs; the desktop window runs sandboxed with a CSP, no remote
@@ -56,6 +62,21 @@ can decide what to use it for.
   "bye" so you disappear from other people's lists immediately. Cards are
   signed, and shown as UNCONFIRMED until the sender's profile has replicated
   and their key matches it.
+- **Your topics are visible to whoever watches their rooms.** Picking a topic
+  makes your key and IP sit in that topic's room, in the open. Ember sits in
+  two decoy rooms as well, steady like real picks, so an observer can't tell
+  which ones are yours from presence alone. But decoys are only cover: what
+  you *post* about also goes into that topic's room, and the Discover buckets
+  you join still follow what you write and read.
+- **Campfires are public rooms.** Anyone sitting in the same topic room sees
+  your name and key at the fire and can read what you say there. Messages are
+  signed and kept only in memory, but any participant can copy them.
+- **Shared blocklists are public.** SHARE MY BLOCKLIST publishes the keys you
+  block in your feed, where anyone can read them, and turning it off publishes
+  an empty list but can't recall copies already made. Off by default. Lists
+  you subscribe to, and your circle's lists, only change what *you* see and
+  relay: a malicious list can hide people from you, never from anyone else, and
+  never someone you follow.
 - **Spam / Sybil.** Per-connection rate limits exist, but nothing stops
   someone from making many identities and filling a discovery bucket.
 

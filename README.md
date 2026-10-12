@@ -22,6 +22,16 @@ Discovery works by *meaning*: posts are hashed into buckets of nearby topics
 strangers writing about the same thing. Attention follows proximity, not
 popularity.
 
+**Topics** put you in rooms with people into the same things from the first
+minute, even before you've posted. Discover can also learn what you like, on
+your machine only: it shows you *why* each post is there, lets you remove
+anything it learned, and has a dial from FAMILIAR to STRANGE. When three people
+share a topic room at the same moment, a **campfire** lights: a live chat that
+leaves no trace. Moderation is yours: block, mute, or subscribe to the
+blocklists of people you trust.
+
+Ember speaks **English, French, Chinese and Arabic** (right-to-left included).
+
 **Nearby** (opt-in, off by default) adds proximity in *space*: see who runs
 Ember on the same Wi-Fi, or who opted in near your town. Ember asks your PC
 where it is, snaps that to the nearest town, and shares only the town: your
@@ -36,7 +46,10 @@ interoperates with it.
 |---|---|
 | Feeds | Hypercore append-only logs, replicated by followers (sliding tail window) |
 | Networking | Hyperswarm DHT with hole-punching. No Ember servers; joining the DHT contacts public HyperDHT bootstrap nodes |
-| Discovery | LSH buckets as swarm topics + a small-network commons bucket |
+| Discovery | LSH buckets as swarm topics, named topic rooms (with decoys), a local compass with a FAMILIAR ↔ STRANGE dial, a small-network commons trickle |
+| Campfires | live rooms that light when 3+ people share a topic room; signed, memory-only |
+| Moderation | personal blocks and mutes, optional shared blocklists, subscriptions, your circle's lists as a quiet signal |
+| Languages | English, French, Chinese, Arabic (RTL) |
 | Nearby | opt-in: signed beacons on the local network, and grid-cell swarm topics around your town (PC location snapped to a town; only the town is shared) |
 | Posts | text with light markdown, images, video (desktop, transcoded with FFmpeg), quotes, replies, reposts, 24h stories |
 | Messages | end-to-end encrypted DMs (text, images, voice notes on desktop), offline queue, message requests |

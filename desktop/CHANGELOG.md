@@ -1,5 +1,73 @@
 # Changelog
 
+## v2.8.0 — Topics, compass, campfires, four languages
+- **Ember speaks French, Chinese and Arabic.** A language picker opens the
+  first launch (and lives in SETUP): it sets the interface language *and* the
+  languages you read. Arabic flips the whole interface right-to-left. Posts,
+  names and messages are never translated or touched: they stay in the
+  language they were written in, with their own text direction. Arabic and
+  Chinese text gets a font that can shape it, everywhere in the app.
+- **Topics.** New installs (and everyone upgrading from 2.7, once) pick what
+  they're into from 24 topics, each named in all four languages, or say it in
+  their own words. Each topic is a **room** on the network: you sit in it, and
+  posts about it reach you. Posts are recognised as being about a topic in
+  English, French, Chinese or Arabic, and travel into that room even if the
+  author never picked it. Rooms can be empty at first; that's fine, they fill
+  as people arrive. Change them any time in SETUP.
+- **Decoy rooms.** Which rooms you sit in is visible to the network. Ember
+  also sits in two extra rooms, picked by a secret that never leaves your
+  machine, so nobody watching can tell which interests are really yours. They
+  stay as steady as your real picks, so they can't be told apart over time.
+- **Smaller commons faucet.** With topics picked, the global commons bucket
+  becomes a trickle: joined only while you have fewer than 3 gossip peers.
+  The SETUP switch now takes effect immediately in both directions.
+- **Compass.** Discover learns what you like from what you post, reply to,
+  repost and save (and what you mute or mark NOT INTERESTED). It fades over a
+  few weeks, never leaves your machine, and SETUP shows it as words you can
+  remove one by one, or reset. Your Feed is unchanged: the people you follow,
+  in the order they posted.
+- **FAMILIAR ↔ STRANGE.** A four-step dial on Discover: from posts closest to
+  your compass to the far side of it. Further steps also sit you in more
+  buckets around it.
+- **Why am I seeing this?** Every Discover card says, in one line: a topic you
+  picked, someone you follow, words it shares with your compass, close to
+  your compass, from further out, or that it matched your search.
+- **NOT INTERESTED** in a Discover card's ··· menu hides it and teaches the
+  compass "less of this". ONLY POSTS I CAN READ hides scripts you don't read.
+- **Circle moderation.** Blocking stays personal, and nothing is ever deleted
+  or enforced on anyone else. Optionally:
+  - **Share my blocklist:** your blocks are published as a signed list in your
+    own log, for people who trust your judgement. Turning it off publishes an
+    empty list.
+  - **Subscribe** to someone's list (paste their key): everyone on it is hidden
+    for you, including at campfires.
+  - **Listen to my circle:** someone on the lists of two people you follow is
+    hidden from your Discover; on one list, they're ranked down and marked.
+    People you follow are never hidden.
+  - **Fading:** what you muted, or what your lists hide, no longer travels
+    *through* you. Ember has no central moderation; this is how a crowd's
+    judgement slows something down instead.
+- **Campfires** (new tab, ▲). When you and two others sit in the same topic
+  room at the same moment, a live room lights up. Messages are signed, live
+  only in memory, and disappear when the fire goes out. A toast tells you when
+  one lights.
+- **Restore fixed.** Restoring an identity on a fresh install used to start
+  writing before the old history had downloaded, which forked the log: your
+  followers then rejected everything new. Ember now downloads your history
+  first. Until it arrives, posting is paused and a banner explains why (with
+  IT NEVER POSTED · START NOW for identities that really never posted), and
+  the pause survives a restart.
+- **Nearby: no more ghosts.** When two people dialled each other at the same
+  moment, one side could be left holding a dead connection: their "bye" (and
+  later cards) never arrived, so they stayed listed after leaving. A
+  connection that stays silent is now dropped (on Nearby, gossip and DMs),
+  and Nearby looks the area up again at once to replace it.
+- Tests: 167 taste checks (topics in four languages, compass, dial, why,
+  modlist), 11 campfire checks, 78 protocol checks, 71 UI cases (19 new), and
+  two end-to-end runs on a private DHT: three instances (rooms, campfires,
+  cross-room posts, blocklist subscriptions, Arabic after reload) and an
+  identity restore with the log's only holder offline, then back.
+
 ## v2.7.0 — Nearby
 - **NEARBY** (new tab, ◌). Discover finds people near you in *meaning*; Nearby
   finds people near you in *space*. Both parts are opt-in and off by default.

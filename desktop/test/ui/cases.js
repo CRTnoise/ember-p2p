@@ -1,5 +1,5 @@
 // each test runs in a freshly loaded page. Helpers: q, qa, click, wait, called, until
-module.exports = [
+module.exports = (process.env.ONLY ? (a => a.filter(c => c[0].includes(process.env.ONLY))) : (a => a))([
   // ---------- inbox rail ----------
   ['rail: ACCEPT a message request', `click(qa('#irlist .acc')[0]); await until(() => called('dmAccept')); return called('dmAccept') && q('#irthread').classList.contains('open')`],
   ['rail: IGNORE a message request', `click(qa('#irlist .ign')[0]); await until(() => called('dmIgnore')); return called('dmIgnore')`],
@@ -52,8 +52,32 @@ module.exports = [
   ['notifs: reply notification focuses the post', `go('notifs'); await wait(400); const r = [...qa('.nrow, .notif, .notifrow')].find(x => x.textContent.includes('replied')); if (!r) return 'no reply notif row'; click(r); await wait(1500); const f = q('.card.focus'); return !!f && f.dataset.seq === '31' && f.querySelector('.thread').classList.contains('open')`],
   // ---------- stories / settings ----------
   ['stories: open a story', `const s = [...qa('.story')].find(x => x.textContent.includes('Mira')); click(s); await until(() => called('getStory')); return called('getStory')`],
-  ['settings: toggling a setting saves it', `go('settings'); await wait(500); const sw = q('.switch, .sw, [id^=s-]'); if (!sw) return 'no switch'; click(sw); await until(() => called('setSettings')); return called('setSettings')`],
+  ['settings: toggling a setting saves it', `go('settings'); await wait(500); const sw = q('#s-commons'); if (!sw) return 'no switch'; click(sw); await until(() => called('setSettings')); return called('setSettings')`],
   ['dm view: opening a conversation focuses the message box', `await openDm(DEMO.MIRA); await wait(300); return document.activeElement === q('#dmtext')`],
+  // ---------- v2.8: discover dial / why / not interested ----------
+  ['discover: every card says why it is there', `go('discover'); await until(() => q('#feed .card')); const c = qa('#feed .card'); return c.length === 4 && [...c].every(x => x.querySelector('.why')) && c[0].querySelector('.why').textContent.includes('ART & PRINT')`],
+  ['discover: a card on a followed person\'s list is flagged', `go('discover'); await until(() => q('#feed .card')); return !!q('#feed .why.flag') && q('#feed .why.flag').textContent.includes('ON A LIST')`],
+  ['discover: dial reaches the engine', `go('discover'); await until(() => q('.dialrow .rchip')); click(q('.dialrow .rchip[data-d="3"]')); await until(() => called('tasteSet')); return __calls.find(c => c.k === 'tasteSet').a[0].dial === 3`],
+  ['discover: NOT INTERESTED removes the card', `go('discover'); await until(() => q('#feed .card')); const c = q('#feed .card'); click(c.querySelector('.more')); click(c.querySelector('[data-m=notint]')); await until(() => called('notInterested')); await wait(100); return !c.isConnected`],
+  ['discover: search hides the dial', `q('#search').value = 'riso'; go('discover'); await until(() => q('#feed .card')); return !q('.dialrow') && q('#feed .why').textContent.includes('MATCHES YOUR SEARCH')`],
+  // ---------- v2.8: settings ----------
+  ['settings: toggling a topic updates the rooms', `go('settings'); await until(() => q('[data-tp=music]')); click(q('[data-tp=music]')); await until(() => called('tasteSet')); const t = __calls.find(c => c.k === 'tasteSet').a[0].topics; return t.includes('music') && t.includes('art')`],
+  ['settings: compass words can be removed', `go('settings'); await until(() => q('[data-term=riso]')); click(q('[data-term=riso]')); await until(() => called('tasteForget')); return __calls.find(c => c.k === 'tasteForget').a[0] === 'riso' && !q('[data-term=riso]')`],
+  ['settings: reading languages saved', `go('settings'); await until(() => q('[data-rd=ar]')); click(q('[data-rd=ar]')); await until(() => called('tasteSet')); return __calls.find(c => c.k === 'tasteSet').a[0].readLangs.join() === 'en,fr,ar'`],
+  ['settings: share blocklist switch', `go('settings'); await until(() => q('#m-pubsw')); click(q('#m-pubsw')); await until(() => called('modSet')); return __calls.find(c => c.k === 'modSet').a[0].publishBlocklist === true`],
+  ['settings: subscribe to a blocklist from a messy key', `go('settings'); await until(() => q('#m-subkey')); q('#m-subkey').value = 'key: ' + DEMO.TOVAR.toUpperCase(); click(q('#m-subbtn')); await until(() => called('modSub')); return __calls.find(c => c.k === 'modSub').a[0] === DEMO.TOVAR`],
+  ['settings: unsubscribe', `go('settings'); await until(() => q('[data-un]')); click(q('[data-un]')); await until(() => called('modUnsub')); return called('modUnsub')`],
+  // ---------- v2.8: campfires ----------
+  ['campfires: lit and waiting fires are listed', `go('fires'); await until(() => q('.firerow')); const r = qa('.firerow'); return r.length === 2 && r[0].classList.contains('lit') && r[0].textContent.includes('LIT · 3 HERE') && r[1].textContent.includes('WAITING')`],
+  ['campfires: open a lit fire and send', `go('fires'); await until(() => q('.firerow.lit')); click(q('.firerow.lit')); await until(() => q('#fireText')); q('#fireText').value = 'hi fire'; click(q('#fireSend')); await until(() => called('fireSend')); await wait(300); return __calls.find(c => c.k === 'fireSend').a.join() === 'art,hi fire' && q('#fireMsgs').textContent.includes('hi fire')`],
+  ['campfires: an unlit fire does not open', `go('fires'); await until(() => q('.firerow')); click(qa('.firerow')[1]); await wait(300); return !q('#fireText')`],
+  // ---------- v2.8: onboarding + languages ----------
+  ['onboarding: 2.7 users get language then topics only', `await (async () => { $('#onboard').classList.remove('open'); TASTE.onboarded = false; window.ember.tasteState = () => Promise.resolve({ ...TASTE, onboarded: false }); await maybeOnboard() })(); if (!q('#ob0.on')) return 'no language step'; click(q('[data-l=fr]')); click(q('#obLangGo')); await until(() => q('#obT.on')); click(q('#obTopics [data-tp=code]')); click(q('#obTopicsGo')); await until(() => !q('#onboard').classList.contains('open')); const sets = __calls.filter(c => c.k === 'tasteSet').map(c => c.a[0]); return sets[0].uiLang === 'fr' && sets.some(x => x.topics && x.topics.includes('code') && x.onboarded === true)`],
+  ['languages: French dictionary translates the page, not the posts', `window.__I18N = { fr: { strings: { 'FEED': 'FIL', 'say something to the swarm…': 'dis quelque chose…' }, patterns: [['^([0-9]+) GOSSIP · ([0-9]+) BUCKETS$', '$1 GOSSIP · $2 CASES']] } }; await setLanguage('fr'); await wait(200); return q('#nav-feed .lb').textContent === 'FIL' && q('#text').placeholder === 'dis quelque chose…' && q('#netstat').textContent.includes('24 CASES') && q('.card .body').textContent.startsWith('Finished')`],
+  ['languages: Arabic flips the layout', `window.__I18N = { ar: { strings: { 'FEED': 'الخلاصة' }, patterns: [] } }; await setLanguage('ar'); return document.documentElement.dir === 'rtl' && q('#nav-feed .lb').textContent === 'الخلاصة'`],
+  // ---------- v2.8: restore ----------
+  ['restore: banner shows while the log downloads, skip asks first', `showRestore(true); if (!q('#restoreBar').classList.contains('show')) return 'no banner'; click(q('#restoreSkip')); await until(() => called('restoreSkip')); return !q('#restoreBar').classList.contains('show')`],
+  ['restore: a write refused during restore explains itself', `const e = new Error('Error invoking remote method: Error: RESTORE_PENDING'); window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise: Promise.resolve(), reason: e })); await wait(100); return q('#toast').textContent.includes('STILL RESTORING') && q('#restoreBar').classList.contains('show')`],
   ['image viewer: Esc closes it', `click(q('.card .postimg[data-media]')); await wait(400); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await wait(100); return !q('#lightbox').classList.contains('open')`],
   ['image viewer: clicking outside closes it', `click(q('.card .postimg[data-media]')); await wait(400); q('#lightbox').dispatchEvent(new MouseEvent('click', { bubbles: true })); await wait(100); return !q('#lightbox').classList.contains('open')`],
   ['image viewer: shows the full image the engine returned', `const t = q('.card .postimg[data-media]'); const [a, sq] = t.dataset.media.split(':'); click(t); await until(() => called('getMedia')); await wait(400); const full = await window.ember.getMedia(a, +sq); return q('#lbImg').getAttribute('src') === full && !q('#lbImg').classList.contains('loading') && q('#lbImg').naturalWidth > 0`],
@@ -61,4 +85,4 @@ module.exports = [
   ['image viewer: second open is instant (cached)', `const t = q('.card .postimg[data-media]'); click(t); await wait(400); q('#lbClose').click(); const n = __calls.filter(c => c.k === 'getMedia').length; click(t); await wait(200); return __calls.filter(c => c.k === 'getMedia').length === n`],
   ['image viewer: thumb-only image (no full media) still opens', `const p = [...qa('.card .postimg')].find(i => !i.dataset.media && !i.closest('.vidwrap')); if (!p) return true; click(p); await wait(200); return q('#lightbox').classList.contains('open')`],
   ['video thumbnail opens the player, not the image viewer', `click(q('.vidwrap .postimg')); await wait(500); return !q('#lightbox').classList.contains('open')`],
-]
+])

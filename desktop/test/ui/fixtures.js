@@ -159,14 +159,45 @@
     { id: 'n3', type: 'post', from: OLAND, ts: now - 3 * h, text: 'Pixel set for the night-market zine.', read: true }
   ]
 
+  // v2.8: topics, compass, circle moderation, campfires
+  const catalog = [
+    { id: 'music', label: { en: 'Music', fr: 'Musique', zh: '音乐', ar: 'موسيقى' } },
+    { id: 'art', label: { en: 'Art & print', fr: 'Art & estampe', zh: '艺术与版画', ar: 'فن وطباعة' } },
+    { id: 'pixel', label: { en: 'Pixel art', fr: 'Pixel art', zh: '像素艺术', ar: 'فن البكسل' } },
+    { id: 'code', label: { en: 'Code', fr: 'Code', zh: '编程', ar: 'برمجة' } },
+    { id: 'privacy', label: { en: 'Privacy', fr: 'Vie privée', zh: '隐私', ar: 'الخصوصية' } }
+  ]
+  let taste = { catalog, langs: ['en', 'fr', 'zh', 'ar'], topics: ['art', 'pixel'], topicText: 'risograph zines', dial: 1, onlyMyLangs: false, uiLang: 'en', readLangs: ['en', 'fr'],
+    onboarded: Q.get('onboarded') !== '0', campfires: true, terms: [{ term: 'riso', w: 2.1 }, { term: 'zine', w: 1.6 }, { term: 'linocut', w: 0.9 }], avoid: [{ term: 'crypto', w: -0.8 }], suggest: [] }
+  let mod = { publishBlocklist: false, circleSignals: true, subs: [{ key: K('c1'), name: 'tovar-lists', count: 37, ts: now - d }], blocked: 0, listHidden: 37, circleHidden: 2, circleSoft: 5 }
+  const fireMsgs = [
+    { fire: 'art', author: S2, name: 'linocut.lou', ts: now - 4 * m, text: 'anyone printing this weekend?', verified: true },
+    { fire: 'art', author: S1, name: 'kestrel', ts: now - 3 * m, text: 'riso on saturday, two colours', verified: false }
+  ]
+  const why = [{ k: 'topic', topic: 'art' }, { k: 'follow' }, { k: 'compass', terms: ['riso', 'zine'] }, { k: 'wide' }]
   const ok = (v) => Promise.resolve(v)
+
   const noop = () => {}
   const emit = (fn, v, delay = 300) => setTimeout(() => fn(v), delay)
   window.DEMO = { ME_KEY, MIRA, TOVAR, STRANGER, LANP }
   window.ember = {
     me: () => ok({ key: ME_KEY, length: 32, profile: profiles[ME_KEY] }),
     timeline: () => ok({ items, profiles, follows: [MIRA, TOVAR, OLAND, ADA, NOOR], peers: 6, seeders: 4, replyCounts }),
-    discover: (q) => ok({ items: q ? discoverItems : discoverItems.slice().sort((a, b) => b.ts - a.ts), profiles, buckets: 24, gossipPeers: 9 }),
+    discover: (q) => ok({ items: (q ? discoverItems : discoverItems.slice().sort((a, b) => b.ts - a.ts)).map((it, i) => ({ ...it, why: q ? { k: 'search' } : why[i % why.length], flagged: !q && i === 3 })), profiles, buckets: 24, gossipPeers: 9, dial: taste.dial, quiet: !!Q.get('quiet'), topics: taste.topics.length, commons: true }),
+    tasteState: () => ok(taste),
+    tasteSet: (p) => { taste = { ...taste, ...p }; return ok(taste) },
+    tasteForget: (t) => { taste = { ...taste, terms: taste.terms.filter(x => x.term !== t), avoid: taste.avoid.filter(x => x.term !== t) }; return ok(taste) },
+    tasteReset: () => { taste = { ...taste, terms: [], avoid: [] }; return ok(taste) },
+    i18n: (l) => ok(window.__I18N ? window.__I18N[l] || null : null),
+    modState: () => ok(mod),
+    modSet: (p) => { mod = { ...mod, ...p }; return ok(mod) },
+    modSub: (k) => { mod = { ...mod, subs: [...mod.subs, { key: k, name: '', count: 0, ts: 0 }] }; return ok(mod) },
+    modUnsub: (k) => { mod = { ...mod, subs: mod.subs.filter(x => x.key !== k) }; return ok(mod) },
+    firesList: () => ok({ on: taste.campfires, fires: [
+      { fire: 'art', lit: true, people: 3, names: [{ key: S2, name: 'linocut.lou' }, { key: S1, name: 'kestrel' }], terms: [], last: fireMsgs[1], count: 2 },
+      { fire: 'pixel', lit: false, people: 2, names: [{ key: S3, name: 'hana' }], terms: [], last: null, count: 0 }] }),
+    fireMessages: () => ok(fireMsgs),
+    fireSend: (f, t) => { fireMsgs.push({ fire: f, author: ME_KEY, name: 'Wren', ts: Date.now(), text: t, mine: true, verified: true }); return ok({ ok: true }) },
     resolveBlock: (a, s) => ok(items.find(i => i.author === a && i.seq === s) || null),
     getMedia: (a, s) => ok(s === 40 ? riso : s === 11 ? pixel : null),
     getReplies: () => ok([]), stories: () => ok(stories),
@@ -194,8 +225,8 @@
   }
   // everything else the preload exposes: harmless no-ops / empty results
   for (const n of ['post', 'reply', 'setProfile', 'follow', 'unfollow', 'repost', 'postVideo', 'getVideo', 'deletePost', 'postStory',
-    'block', 'mute', 'unblock', 'unmute', 'exportIdentity', 'restoreIdentity', 'dmAccept', 'dmIgnore', 'dmSend', 'savePost', 'unsavePost', 'clearCache',
+    'block', 'mute', 'unblock', 'unmute', 'notInterested', 'restoreSkip', 'exportIdentity', 'restoreIdentity', 'dmAccept', 'dmIgnore', 'dmSend', 'savePost', 'unsavePost', 'clearCache',
     'winMin', 'winMax', 'winClose']) if (!window.ember[n]) window.ember[n] = () => ok(true)
-  for (const n of ['onTranscodeProgress', 'onVideoProgress', 'onNotif', 'onEngineReady', 'onDmReceived', 'onDmPeers', 'onFeedUpdated', 'onDiscoverUpdated', 'onRepliesUpdated', 'onNearUpdated'])
+  for (const n of ['onTranscodeProgress', 'onVideoProgress', 'onNotif', 'onEngineReady', 'onDmReceived', 'onDmPeers', 'onFeedUpdated', 'onDiscoverUpdated', 'onRepliesUpdated', 'onNearUpdated', 'onRestoreState', 'onModUpdated', 'onFiresUpdated', 'onCommonsState'])
     if (!window.ember[n]) window.ember[n] = noop
 })()
