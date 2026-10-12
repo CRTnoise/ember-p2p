@@ -18,6 +18,7 @@ const os = require('os')
 const ffmpegPath = require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked')
 const dm = require('./dm')
 const P = require('./protocol')
+const { Nearby, searchPlaces, locateTown } = require('./nearby')
 const sodium = require('sodium-universal')
 
 function signMsg (str) {
@@ -55,7 +56,9 @@ const dmSockets = new Set()   // sockets on dm swarm
 const dmConvos = new Map()    // peerHexKey -> [{from,to,text,ts}]
 const saved = new Map()       // id(author:seq) -> saved announcement (permanent, re-broadcast)
 let dmSwarm = null
-let SETTINGS = { theme: 'paper', tailWindow: 150, commons: true, keepDmHistory: true }
+let SETTINGS = { theme: 'paper', tailWindow: 150, commons: true, keepDmHistory: true, nearLan: false, nearArea: null, nearHidden: false }
+let nearby = null              // proximity in space (nearby.js); both channels opt-in
+let myName = ''
 const notifs = []             // {id,type:'reply'|'dm'|'post',from,ts,text,ref,read}
 const dmAccepted = new Set()  // keys whose message requests were accepted
 const blocked = new Set()     // dropped everywhere: gossip, dms, timeline, discover
@@ -449,6 +452,8 @@ async function startEngine () {
       dmKey: myEdPk, ts: Date.now()
     })
   }
+  myName = (prof && prof.name) || ''
+  startNearby()
   refreshInterests()
   setInterval(refreshInterests, 60_000)
   // auto-commons: once proximity buckets alone sustain enough peers, leave the
@@ -648,7 +653,7 @@ ipcMain.handle('set-profile', async (_e, { name, bio, status, avatar }) => {
   }
   if (avatar && typeof avatar === 'string' && avatar.length <= 60_000) blk.avatar = avatar
   else if (prev.avatar) blk.avatar = prev.avatar
-  await myCore.append(blk); return true
+  await myCore.append(blk); myName = blk.name || ''; return true
 })
 
 ipcMain.handle('follow', async (_e, { key }) => {
@@ -1071,6 +1076,86 @@ ipcMain.handle('set-settings', async (_e, patch) => {
   return SETTINGS
 })
 
+// ---- nearby (proximity in space, opt-in) ----
+
+function startNearby () {
+  let pending = null, firstHit = null
+  nearby = new Nearby({
+    me: () => ({ key: hex(myCore.key), edpk: myEdPk, name: myName }),
+    sign: signMsg,
+    verify: verifyMsg,
+    knownEdPk: (k) => peerEdPk.get(k),
+    isBlocked: (k) => blocked.has(k),
+    // coalesce: beacons arrive every few seconds per peer; the UI needs at most ~1 refresh/s
+    onChange: (fresh) => {
+      if (fresh && !firstHit) firstHit = { key: fresh.key, name: fresh.name }
+      if (pending) return
+      pending = setTimeout(() => { broadcast('near-updated', firstHit); pending = null; firstHit = null }, 700)
+    }
+  })
+  applyNearby()
+  buildTrayMenu()
+}
+
+// Bring the running channels in line with the saved choices. "Hide me from
+// Nearby" wins over both, but keeps the choices so un-hiding restores them.
+async function applyNearby () {
+  if (!nearby) return
+  const hidden = SETTINGS.nearHidden === true
+  if (SETTINGS.nearLan && !hidden) nearby.startLan(); else nearby.stopLan()
+  const a = SETTINGS.nearArea
+  const want = a && typeof a.place === 'string' && !hidden
+  const cur = nearby.area.cfg
+  if (!want) await nearby.stopArea()
+  else if (!nearby.area.on || !cur || cur.place !== a.place || cur.radius !== a.radius || cur.lat !== a.lat || cur.lon !== a.lon) await nearby.startArea(a).catch(() => {})
+}
+function nearState () {
+  if (!engineUp || !nearby) return NEAR_OFF
+  const a = SETTINGS.nearArea
+  return { ...nearby.state(), hidden: SETTINGS.nearHidden === true, saved: { lan: SETTINGS.nearLan === true, area: a ? { place: a.place, lat: a.lat, lon: a.lon, radius: a.radius, source: a.source || 'typed' } : null } }
+}
+async function setNearHidden (h) {
+  SETTINGS.nearHidden = h === true; saveSettings()
+  await applyNearby(); buildTrayMenu()
+  broadcast('near-updated', null)
+  return nearState()
+}
+
+const NEAR_OFF = { lan: { on: false }, area: { on: false }, radii: disc.AREA_RADII, people: [], hidden: false, saved: { lan: false, area: null } }
+const okCoords = (c) => c && Number.isFinite(c.lat) && Number.isFinite(c.lon) && Math.abs(c.lat) <= 90 && Math.abs(c.lon) <= 180
+ipcMain.handle('near-state', async () => nearState())
+ipcMain.handle('near-set-lan', async (_e, { on }) => {
+  if (!nearby) return NEAR_OFF
+  SETTINGS.nearLan = on === true; saveSettings()
+  await applyNearby()
+  return nearState()
+})
+ipcMain.handle('near-set-area', async (_e, cfg) => {
+  if (!nearby) return NEAR_OFF
+  if (!(cfg && typeof cfg.place === 'string' && cfg.place.length <= 80 && okCoords(cfg))) {
+    SETTINGS.nearArea = null
+  } else {
+    const radius = disc.AREA_RADII.includes(cfg.radius) ? cfg.radius : 25
+    const source = cfg.source === 'located' ? 'located' : 'typed'
+    SETTINGS.nearArea = { place: cfg.place, lat: Math.round(cfg.lat * 100) / 100, lon: Math.round(cfg.lon * 100) / 100, radius, source }
+  }
+  saveSettings(); await applyNearby()
+  return nearState()
+})
+// The PC's own location → nearest bundled town. The precise position never
+// leaves this function: not to the page, not to disk, not to the network.
+ipcMain.handle('near-locate', async (_e, { radius } = {}) => {
+  if (!nearby) return { error: 'booting', state: NEAR_OFF }
+  const town = await locateTown()
+  if (town.error) return { error: town.error, state: nearState() }
+  const r = disc.AREA_RADII.includes(radius) ? radius : ((SETTINGS.nearArea && SETTINGS.nearArea.radius) || 25)
+  SETTINGS.nearArea = { place: town.place, lat: town.lat, lon: town.lon, radius: r, source: 'located' }
+  saveSettings(); await applyNearby()
+  return { town: { place: town.place, km: town.km }, state: nearState() }
+})
+ipcMain.handle('near-set-hidden', async (_e, { hidden }) => setNearHidden(hidden))
+ipcMain.handle('near-search', async (_e, { q }) => searchPlaces(typeof q === 'string' ? q.slice(0, 80) : ''))
+
 ipcMain.handle('clear-cache', async () => {
   discovered.clear(); saveCache(); return true
 })
@@ -1089,15 +1174,24 @@ function trayIcon () {
   return nativeImage.createFromBuffer(buf, { width: S, height: S })
 }
 
+function buildTrayMenu () {
+  if (!tray) return
+  const nearOn = !!nearby && (SETTINGS.nearLan || !!SETTINGS.nearArea)
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Open Ember', click: () => { win.show(); win.focus() } },
+    { type: 'separator' },
+    // one click to disappear from Nearby, from anywhere, without opening the app
+    { label: 'Hide me from Nearby', type: 'checkbox', checked: SETTINGS.nearHidden === true, enabled: !!nearby,
+      sublabel: nearOn ? undefined : 'Nearby is off', click: (item) => { setNearHidden(item.checked) } },
+    { type: 'separator' },
+    { label: 'Quit (go offline)', click: () => { quitting = true; app.quit() } }
+  ]))
+}
+
 function createTray () {
   tray = new Tray(trayIcon())
   tray.setToolTip('Ember — online, broadcasting')
-  const menu = Menu.buildFromTemplate([
-    { label: 'Open Ember', click: () => { win.show(); win.focus() } },
-    { type: 'separator' },
-    { label: 'Quit (go offline)', click: () => { quitting = true; app.quit() } }
-  ])
-  tray.setContextMenu(menu)
+  buildTrayMenu()
   tray.on('click', () => { win.isVisible() ? win.hide() : (win.show(), win.focus()) })
 }
 
@@ -1146,5 +1240,5 @@ app.on('before-quit', () => { quitting = true })
 app.on('window-all-closed', () => { /* stay alive in tray; engine keeps broadcasting */ })
 app.on('quit', async () => {
   saveCache(); saveDms(); saveSaved(); saveSettings(); saveNotifs(); saveAccepted(); saveMod(); saveOutbox()
-  try { await feedSwarm.destroy(); await gossipSwarm.destroy(); await dmSwarm.destroy() } catch {}
+  try { if (nearby) await nearby.destroy(); await feedSwarm.destroy(); await gossipSwarm.destroy(); await dmSwarm.destroy() } catch {}
 })

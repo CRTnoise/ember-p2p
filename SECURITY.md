@@ -38,6 +38,24 @@ can decide what to use it for.
   their profile replicates to you.
 - **Data at rest.** Local storage and the identity backup file are not
   encrypted. Anyone with access to your device or that file is you.
+- **Nearby (when you turn it on).** SAME NETWORK broadcasts your name and
+  key to everyone on the local network every few seconds, for as long as it's
+  on. SAME AREA tells anyone who joins the same grid cells that your key is
+  near your town, along with your IP address, as with any swarm. LOCATE ME
+  reads the PC's position from the operating system (on Windows, its Location
+  service, which may itself use Microsoft's Wi-Fi positioning), snaps it to the
+  nearest town in the bundled list, and discards it: only the town's centre is
+  ever stored or sent. Distances shown are between town centres, so they can't
+  be used to triangulate anyone. In a small town, the town is still a real
+  location.
+- **Nearby can't verify where anyone is.** With no server, a location always
+  comes from the sender's own machine: anyone can type another town, fake
+  their OS location, or run a modified client to watch an area. Treat a Nearby
+  town as a claim, like a profile bio. Both channels are off by default; HIDE
+  ME FROM NEARBY (tab or tray) stops everything at once and sends a signed
+  "bye" so you disappear from other people's lists immediately. Cards are
+  signed, and shown as UNCONFIRMED until the sender's profile has replicated
+  and their key matches it.
 - **Spam / Sybil.** Per-connection rate limits exist, but nothing stops
   someone from making many identities and filling a discovery bucket.
 

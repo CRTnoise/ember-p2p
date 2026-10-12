@@ -79,4 +79,57 @@ ok(P.dmPreview(JSON.stringify({ k: 't', d: 'hey hey' })) === 'hey hey', 'preview
 ok(P.dmPreview(JSON.stringify({ k: 'i', d: IMG })) === '[image]', 'preview image')
 ok(P.dmPreview('raw legacy') === 'raw legacy', 'preview legacy')
 
+// ---- nearby: near cards ----
+const D = require('../src/discovery')
+const now = Date.now()
+const EDPK = b4a.toString(kp.publicKey, 'hex')
+const sig64 = (m) => b4a.toString(sign(m), 'base64')
+const vfy64 = (m, s) => vfy(m, b4a.from(s, 'base64'))
+const card = (o) => { const c = P.makeNearCard({ via: 'area', key: K, edpk: EDPK, name: 'iglesias', place: 'Évry, FR', lat: 48.6312, lon: 2.4410, ts: now, ...o }); c.sig = sig64(P.nearMsg(c)); return c }
+const good = card({})
+ok(good.lat === 48.63 && good.lon === 2.44, 'near card not rounded to a town centre')
+ok(P.cleanNear(good, now) && vfy64(P.nearMsg(P.cleanNear(good, now)), good.sig), 'near card roundtrip')
+ok(!vfy64(P.nearMsg({ ...good, name: 'mallory' }), good.sig), 'near card name swap still verifies')
+ok(!vfy64(P.nearMsg({ ...good, place: 'Oran, DZ' }), good.sig), 'near card place swap still verifies')
+ok(!vfy64(P.nearMsg({ ...good, via: 'lan' }), good.sig), 'area card replayed as lan still verifies')
+const piped = card({ name: 'a|b', place: 'c|d' })
+ok(!piped.name.includes('|') && !piped.place.includes('|'), 'pipe kept in signed near fields')
+ok(P.cleanNear({ ...good, name: 'a|b' }, now) === null, 'near card with pipe in name accepted')
+ok(P.cleanNear({ ...good, lat: 48.6312 }, now) === null, 'near card finer than a town centre accepted')
+ok(P.cleanNear({ ...good, lat: 91 }, now) === null, 'near card off the globe accepted')
+ok(P.cleanNear(good, now + 11 * 60_000) === null, 'stale near card accepted')
+ok(P.cleanNear({ ...good, name: '<img src=x onerror=1>'.repeat(5) }, now) === null, 'overlong near name accepted')
+ok(P.cleanNear({ ...good, key: 'nothex' }, now) === null, 'near card with bad key accepted')
+const lan = P.makeNearCard({ via: 'lan', key: K, edpk: EDPK, name: 'iglesias', place: 'Évry, FR', lat: 1, lon: 1, ts: now })
+ok(lan.place === undefined && lan.lat === undefined, 'lan card leaks a place')
+lan.sig = sig64(P.nearMsg(lan))
+ok(P.cleanNear(lan, now) && P.cleanNear({ ...lan, place: 'x' }, now) === null, 'lan card place handling')
+const bye = P.makeNearCard({ via: 'bye', key: K, edpk: EDPK, name: 'iglesias', ts: now }); bye.sig = sig64(P.nearMsg(bye))
+ok(P.cleanNear(bye, now) && vfy64(P.nearMsg(bye), bye.sig), 'bye card roundtrip')
+ok(!vfy64(P.nearMsg({ ...lan, via: 'bye' }), lan.sig), 'a presence card replayed as bye still verifies')
+
+// ---- nearby: area grid ----
+const meet = (a, b, rA, rB = rA) => {
+  const ta = D.areaTopics(a[0], a[1], rA), tb = D.areaTopics(b[0], b[1], rB)
+  const hit = (x, y) => y.some(t => t.client && x.some(u => u.server && u.cell === t.cell))
+  return hit(ta, tb) || hit(tb, ta)
+}
+const PARIS = [48.85, 2.35], EVRY = [48.63, 2.44], LYON = [45.76, 4.84]
+ok(Math.abs(D.distanceKm(...PARIS, ...EVRY) - 25.3) < 0.5, 'distance Paris–Évry')
+ok(meet(PARIS, EVRY, 25), 'Paris and Évry do not meet at 25 km')
+ok(meet(PARIS, EVRY, 10, 150), 'mixed radii do not meet')
+ok(!meet(PARIS, LYON, 150), 'Paris and Lyon meet at 150 km')
+ok(meet([-16.5, 179.9], [-16.5, -179.9], 25), 'cells do not wrap the antimeridian')
+let misses = 0
+for (let i = 0; i < 4000; i++) {
+  const la = Math.random() * 140 - 70, lo = Math.random() * 360 - 180, b = Math.random() * 2 * Math.PI
+  for (const [r, max] of [[50, 49], [150, 149]]) {
+    const dk = Math.random() * max
+    const lb = [la + dk / 111 * Math.cos(b), lo + dk / (111 * Math.cos(la * Math.PI / 180)) * Math.sin(b)]
+    if (!meet([la, lo], lb, r)) misses++
+  }
+}
+ok(misses === 0, `area grid missed ${misses} pairs within radius`)
+ok(D.areaTopics(...PARIS, 25).every(t => t.topic.length === 32), 'area topic is not 32 bytes')
+
 console.log(`${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0)

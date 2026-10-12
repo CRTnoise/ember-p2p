@@ -21,6 +21,14 @@ store) is distributing a GPL program alongside it, and must:
 Running Ember from source (`npm start`) involves no distribution and no
 obligations. Mobile builds don't include FFmpeg.
 
+## Town list (desktop)
+`desktop/src/places.tsv`, the offline town list behind NEARBY → SAME AREA, is
+derived from [GeoNames](https://www.geonames.org) data (via the
+`all-the-cities` package), licensed
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It lists towns of
+5,000+ inhabitants with their names, country codes, rounded centre coordinates
+and populations; `tools/build-places.js` regenerates it.
+
 ## Everything else
 Holepunch stack (`hypercore`, `corestore`, `hyperswarm`): MIT ·
 `sodium-universal`: MIT · `b4a`, `react-native-bare-kit`, `bare-*`: Apache-2.0 ·

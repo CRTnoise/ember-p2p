@@ -13,8 +13,9 @@ public** networks, or the DHT can't hole-punch and you'll see 0 peers.
 
 ## Test
 ```bash
-npm test                    # protocol suite: sanitizer, signatures, DM proof, deletes
-npx electron test/ui/run.js # UI suite: clicks through the real interface (39 cases)
+npm test                    # protocol suite: sanitizer, signatures, DM proof, deletes, nearby cards + area grid
+npm run test:nearby         # SAME AREA end to end over a private local DHT (three peers)
+npx electron test/ui/run.js # UI suite: clicks through the real interface (52 cases)
 ```
 
 ## Build
@@ -45,7 +46,9 @@ download the files from the run's artifacts.
 |---|---|
 | `src/main.js` | the node: identity, feeds, swarms, gossip, DMs, IPC |
 | `src/protocol.js` | **trust boundary**: sanitizer, signature formats, key cleaning, DM proof. Canonical copy shared with mobile |
-| `src/discovery.js` | LSH embedding + bucket topics (shared with mobile) |
+| `src/discovery.js` | LSH embedding + bucket topics, nearby area grid (shared with mobile) |
+| `src/nearby.js` | NEARBY: same-network beacons, same-area swarm, PC location → nearest town, town search |
+| `src/places.tsv` | offline town list for SAME AREA (GeoNames, CC BY 4.0; `tools/build-places.js`) |
 | `src/dm.js` | E2E DM crypto (shared with mobile) |
 | `src/preload.js` | the only API the page can call |
 | `src/index.html` | the whole UI |

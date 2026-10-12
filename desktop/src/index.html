@@ -156,14 +156,15 @@
              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .story.add .sav{border-style:dashed;color:var(--soft);font-size:22px;line-height:46px}
   .story.self{position:relative}
-  .storymenu{position:absolute;left:calc(100% - 6px);top:0;z-index:30;display:none;flex-direction:column;
+  /* fixed, not absolute: the rail scrolls (overflow-y:auto), and a scrolling box
+     clips anything that sticks out sideways. JS places it next to the tile. */
+  .storymenu{position:fixed;left:0;top:0;z-index:60;display:none;flex-direction:column;
              background:var(--paper);border:1px solid var(--line);box-shadow:4px 4px 0 var(--shadow);
              animation:rise var(--dur) var(--ease-out)}
   .story.self:hover .storymenu{display:flex}
   .storymenu button{all:unset;padding:9px 12px;font:500 9px/1 var(--mono);letter-spacing:.14em;
                     color:var(--ink);cursor:pointer;white-space:nowrap}
   .storymenu button:hover{background:var(--ink);color:var(--inv)}
-  .stories{overflow:visible;overflow-y:auto;overflow-x:visible}
   .storyhead{font:700 8px/1 var(--mono);letter-spacing:.2em;color:var(--soft)}
 
   /* story viewer overlay */
@@ -384,6 +385,34 @@
   .ptab{padding:11px 18px;font:700 10px/1 var(--mono);letter-spacing:.2em;border-right:1px solid var(--line);color:var(--ink)}
   .ptab.on{background:var(--ink);color:var(--inv)}
 
+  /* ============ NEARBY ============ */
+  .ptab.sub{background:none;color:var(--soft);font-weight:500;border-right:0;letter-spacing:.14em}
+  .nearpick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .placebox{position:relative}
+  .placebox input{width:320px;border:1px solid var(--line);height:32px;padding:0 10px;font:400 12px/1 var(--mono);
+                  outline:none;background:var(--paper);color:var(--ink)}
+  .placelist{position:absolute;top:100%;left:0;right:0;z-index:40;background:var(--paper);border:1px solid var(--line);
+             border-top:0;box-shadow:4px 4px 0 var(--shadow);display:none}
+  .placelist.open{display:block}
+  .placelist button{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;gap:10px;width:100%;
+                    padding:9px 10px;font:400 12px/1.2 var(--mono);color:var(--ink);cursor:pointer}
+  .placelist button:hover,.placelist button.hl{background:var(--ink);color:var(--inv)}
+  .placelist .pp{opacity:.6;font-size:10px}
+  .radii{display:flex}
+  .rchip{all:unset;cursor:pointer;border:1px solid var(--line);margin-left:-1px;padding:10px 11px;
+         font:500 10px/1 var(--mono);letter-spacing:.12em;color:var(--ink)}
+  .rchip.on{background:var(--ink);color:var(--inv)}
+  .nearerr{color:var(--accent);margin-top:6px}
+  .nearhead{padding:16px 20px 12px;font:700 9px/1 var(--mono);letter-spacing:.2em;color:var(--soft);border-bottom:1px solid var(--line)}
+  .nprow{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);animation:rise var(--dur) var(--ease-out)}
+  .nprow .npid{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+  .ntag{font:500 9px/1 var(--mono);letter-spacing:.14em;border:1px solid var(--line);padding:6px 8px;color:var(--ink);white-space:nowrap}
+  .ntag.warn{color:var(--accent);border-color:var(--accent)}
+  .nearbody.muted{opacity:.45}
+  .hiderow.on{background:color-mix(in srgb, var(--accent) 10%, transparent)}
+  .nearpick.typed{margin-top:14px}
+  .nearpick.typed .sd{white-space:nowrap}
+
   /* ============ SETTINGS ============ */
   .setrow{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding:15px 20px}
   .setrow .sl{flex:1}
@@ -549,7 +578,7 @@
 
   <div class="titlebar">
     <div class="tblogo" onclick="go('feed')"><div class="mark"></div><span class="word">EMBER</span></div>
-    <div class="tbtitle">SERVERLESS · PROXIMITY, NOT PLACES</div>
+    <div class="tbtitle">SERVERLESS · YOUR PEOPLE, NOT AN AUDIENCE</div>
     <div class="winctl">
       <button id="wMin" title="minimize">─</button>
       <button id="wMax" title="maximize">▢</button>
@@ -571,6 +600,7 @@
       <div class="nav">
         <button id="nav-feed" class="on" onclick="go('feed')"><span class="ic">▤</span><span class="lb">FEED</span><span class="dot" id="dot-feed"></span></button>
         <button id="nav-discover" onclick="go('discover')"><span class="ic">◎</span><span class="lb">DISCOVER</span></button>
+        <button id="nav-nearby" onclick="go('nearby')"><span class="ic">◌</span><span class="lb">NEARBY</span><span class="dot" id="dot-nearby"></span></button>
         <button id="nav-notifs" onclick="go('notifs')"><span class="ic">◈</span><span class="lb">NOTIFS</span><span class="dot" id="dot-notifs"></span></button>
         <button id="nav-saved" onclick="go('saved')"><span class="ic">◆</span><span class="lb">SAVED</span></button>
         <button id="nav-profile" onclick="openProfile(ME.key)"><span class="ic">◍</span><span class="lb">PROFILE</span></button>
@@ -618,6 +648,7 @@
       </div>
       <div class="ppage" id="ppage"></div>
       <div class="ppage" id="setpage"></div>
+      <div class="ppage" id="nearpage"></div>
       <div class="ppage" id="notifpage"></div>
       <div class="dmwrap" id="dmwrap">
         <div class="dmlist" id="dmlist"></div>
@@ -866,11 +897,17 @@ function dayLabel (ts) {
 const ago = ts => { const s=(Date.now()-ts)/1000
   if(s<60)return'now'; if(s<3600)return Math.floor(s/60)+'m'; if(s<86400)return Math.floor(s/3600)+'h'
   return Math.floor(s/86400)+'d' }
+// Profiles we've seen anywhere (profile pages, nearby cards), not only the
+// timeline's followed set, which is replaced on every refresh. Without this a
+// stranger's own profile page showed their posts under a hex key.
+const PCACHE = {}
+const profFor = k => DATA.profiles[k] || PCACHE[k] || null
+const rememberProfile = (k, p) => { if (k && p) PCACHE[k] = { ...(PCACHE[k] || {}), ...p } }
 const nameFor = k => {
   if (ME && k===ME.key) return (ME.profile&&ME.profile.name)||'you'
-  const p=DATA.profiles[k]; return (p&&p.name)||k.slice(0,8)
+  const p=profFor(k); return (p&&p.name)||k.slice(0,8)
 }
-const avatarFor = k => { const p=(ME&&k===ME.key)?ME.profile:DATA.profiles[k]; return safeSrc(p&&p.avatar||'')||null }
+const avatarFor = k => { const p=(ME&&k===ME.key)?ME.profile:profFor(k); return safeSrc(p&&p.avatar||'')||null }
 const avatarHTML = (k, cls='avatar') => {
   const av=avatarFor(k); const me=ME&&k===ME.key
   return `<div class="${cls} ${me?'me':''}" data-p="${k}">${av?`<img src="${safeSrc(av)}" alt="">`:esc(nameFor(k)[0]||'?')}</div>`
@@ -904,11 +941,12 @@ function shrinkImage (file, maxFull=900, maxThumb=96) {
 
 function go (view) {
   VIEW = view
-  for (const v of ['feed','discover','notifs','saved','profile','settings']) {
+  for (const v of ['feed','discover','nearby','notifs','saved','profile','settings']) {
     const b = $('#nav-'+v); if (b) b.classList.toggle('on', v===view)
   }
   $('#ppage').classList.toggle('open', view==='profile')
   $('#setpage').classList.toggle('open', view==='settings')
+  $('#nearpage').classList.toggle('open', view==='nearby')
   $('#notifpage').classList.toggle('open', view==='notifs')
   $('#dmwrap').classList.toggle('open', view==='inbox')
   $('#inboxRail').style.display = view==='inbox' ? 'none' : 'flex'
@@ -922,6 +960,7 @@ function go (view) {
   if (view==='inbox') { renderDmList(); markRead('dm') }
   if (view==='notifs') renderNotifs()
   if (view==='settings') renderSettings()
+  if (view==='nearby') renderNearby()
   updatePill()
 }
 
@@ -930,7 +969,7 @@ function go (view) {
 function card (it, opts = {}) {
   const mine = ME && it.author===ME.key
   const name = nameFor(it.author)
-  const status = mine ? (ME.profile&&ME.profile.status) : (DATA.profiles[it.author]&&DATA.profiles[it.author].status)
+  const status = mine ? (ME.profile&&ME.profile.status) : (profFor(it.author)&&profFor(it.author).status)
   const id = it.author+':'+it.seq
   const rc = DATA.replyCounts[id] || 0
   const el = document.createElement('div'); el.className='card cardwrap anim-rise'
@@ -1564,6 +1603,154 @@ const THEMES = {
   ember:    ['#151009','#1d1710','#f59e42']
 }
 
+/* ============ NEARBY — near in SPACE (Discover is near in meaning) ============ */
+// Both channels are opt-in and off by default; the engine side is nearby.js.
+// "Hide me from Nearby" stops everything at once and keeps the choices.
+let NEAR = null
+let NEAR_RADIUS = 25
+const LOCATE_ERR = {
+  denied: 'Windows won\'t share this PC\'s location. Turn on Settings → Privacy & security → Location, including "Let desktop apps access your location", or type your town below.',
+  unavailable: 'this computer can\'t tell where it is (no location service). Type your town below instead.',
+  unknown: 'the location didn\'t come through in time. Try again, or type your town below.',
+  'no-town': 'there\'s no town in Ember\'s list within ~130 km of this PC. Type the nearest one below.',
+  booting: 'Ember is still starting, try again in a moment.'
+}
+async function renderNearby (note) {
+  NEAR = await window.ember.nearState()
+  $('#dot-nearby').classList.remove('show')
+  const saved = NEAR.saved || { lan: NEAR.lan.on, area: NEAR.area.on ? NEAR.area : null }
+  if (saved.area && saved.area.radius) NEAR_RADIUS = saved.area.radius
+  const page = $('#nearpage')
+  const sw = (id, on, dis) => `<div class="switch ${on?'on':''} ${dis?'dis':''}" id="${id}"><div class="knob"></div></div>`
+  const hid = NEAR.hidden === true
+  page.innerHTML = `
+    <div class="ptabs"><div class="ptab on">NEARBY</div><div class="ptab sub">DISCOVER IS NEAR IN MEANING · THIS IS NEAR IN SPACE</div></div>
+    <div class="setrow ${hid?'hiderow on':'hiderow'}"><div class="sl"><div class="st">HIDE ME FROM NEARBY</div>
+      <div class="sd">${hid ? 'you\'re hidden: nothing is broadcast and nobody nearby can find you. your choices below are kept for when you come back.' : 'one switch to disappear from both, right now. also in the tray menu.'}</div></div>${sw('n-hide', hid)}</div>
+    <div class="nearbody ${hid?'muted':''}">
+    <div class="setrow"><div class="sl"><div class="st">SAME NETWORK</div>
+      <div class="sd">say "I'm here" on this Wi-Fi or LAN every few seconds, and see who else does. The signal never leaves the local network. Everyone on it who runs Ember sees your name and key.</div>
+      <div class="sd nearerr" id="n-lanerr"></div></div>${sw('n-lan', saved.lan)}</div>
+    <div class="setrow"><div class="sl"><div class="st">SAME AREA</div>
+      <div class="sd">Ember asks this PC where it is, picks the nearest town, and shares <b>only that town</b>. Your exact position never leaves your computer. People who opted in within your radius find you, and anyone watching that area can see your key is around there.</div>
+      <div class="nearpick">
+        <button class="btn solid" id="n-locate">◎ LOCATE ME</button>
+        <div class="radii">${NEAR.radii.map(r => `<button class="rchip ${r===NEAR_RADIUS?'on':''}" data-r="${r}">${r} KM</button>`).join('')}</div>
+        ${saved.area ? '<button class="btn" id="n-areaoff">STOP SHARING AREA</button>' : ''}
+      </div>
+      <div class="sd nearerr" id="n-locerr">${note && note.error ? esc(note.error) : ''}</div>
+      <div class="sd" id="n-areastat" style="margin-top:8px"></div>
+      <div class="nearpick typed">
+        <span class="sd">no location on this PC? type your town:</span>
+        <div class="placebox"><input id="n-place" maxlength="80" autocomplete="off" spellcheck="false" placeholder="e.g. evry · oran · munich de" value=""><div class="placelist" id="n-places"></div></div>
+      </div></div></div>
+    </div>
+    <div class="nearhead" id="n-head"></div>
+    <div id="n-people"></div>`
+
+  $('#n-hide').onclick = async (e) => {
+    const h = !e.currentTarget.classList.contains('on')
+    NEAR = await window.ember.nearSetHidden(h)
+    toast(h ? 'HIDDEN FROM NEARBY' : 'VISIBLE IN NEARBY AGAIN')
+    renderNearby()
+  }
+  $('#n-lan').onclick = async (e) => {
+    const on = !e.currentTarget.classList.contains('on')
+    NEAR = await window.ember.nearSetLan(on)
+    toast(on ? (NEAR.hidden ? 'SAME NETWORK ON — STILL HIDDEN' : 'VISIBLE ON THIS NETWORK') : 'OFF THIS NETWORK')
+    renderNearby()
+  }
+  $('#n-locate').onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true; b.textContent = '◎ LOCATING…'
+    const r = await window.ember.nearLocate(NEAR_RADIUS)
+    if (r.error) { renderNearby({ error: LOCATE_ERR[r.error] || LOCATE_ERR.unknown }); return }
+    NEAR = r.state
+    toast(`LOCATED · ${r.town.place.toUpperCase()} · ${NEAR_RADIUS} KM`)
+    renderNearby()
+  }
+  const input = $('#n-place'), list = $('#n-places')
+  let timer = null, hits = [], hl = -1
+  const pick = async (h) => {
+    list.classList.remove('open')
+    NEAR = await window.ember.nearSetArea({ place: h.place, lat: h.lat, lon: h.lon, radius: NEAR_RADIUS, source: 'typed' })
+    toast(`SHARING AREA · ${h.place.toUpperCase()} · ${NEAR_RADIUS} KM`)
+    renderNearby()
+  }
+  const draw = () => {
+    list.innerHTML = hits.map((h, i) => `<button data-i="${i}" class="${i===hl?'hl':''}"><span>${esc(h.place)}</span><span class="pp">${h.pop >= 1e6 ? (h.pop/1e6).toFixed(1)+'M' : Math.round(h.pop/1e3)+'K'}</span></button>`).join('')
+    list.classList.toggle('open', hits.length > 0)
+    list.querySelectorAll('button').forEach(b => b.onmousedown = (e) => { e.preventDefault(); pick(hits[+b.dataset.i]) })
+  }
+  input.oninput = () => {
+    clearTimeout(timer)
+    timer = setTimeout(async () => { hits = await window.ember.nearSearch(input.value); hl = hits.length ? 0 : -1; draw() }, 140)
+  }
+  input.onkeydown = (e) => {
+    if (e.key === 'ArrowDown' && hits.length) { hl = (hl + 1) % hits.length; draw(); e.preventDefault() }
+    else if (e.key === 'ArrowUp' && hits.length) { hl = (hl - 1 + hits.length) % hits.length; draw(); e.preventDefault() }
+    else if (e.key === 'Enter' && hl >= 0) { pick(hits[hl]); e.preventDefault() }
+    else if (e.key === 'Escape') { list.classList.remove('open') }
+  }
+  input.onblur = () => setTimeout(() => list.classList.remove('open'), 120)
+  page.querySelectorAll('.rchip').forEach(b => b.onclick = async () => {
+    NEAR_RADIUS = +b.dataset.r
+    page.querySelectorAll('.rchip').forEach(x => x.classList.toggle('on', x === b))
+    const a = NEAR.saved && NEAR.saved.area
+    if (a) { NEAR = await window.ember.nearSetArea({ place: a.place, lat: a.lat, lon: a.lon, radius: NEAR_RADIUS, source: a.source }); renderNearPeople() }
+  })
+  if ($('#n-areaoff')) $('#n-areaoff').onclick = async () => { NEAR = await window.ember.nearSetArea(null); toast('AREA NO LONGER SHARED'); renderNearby() }
+  renderNearPeople()
+}
+
+function renderNearPeople () {
+  if (!NEAR || !$('#n-people')) return
+  const lanErr = $('#n-lanerr')
+  if (lanErr) lanErr.textContent = NEAR.lan.on && NEAR.lan.error ? `network error: ${NEAR.lan.error} (another app may hold port 47777, or the firewall blocks it)` : ''
+  const stat = $('#n-areastat')
+  const sa = NEAR.saved && NEAR.saved.area
+  const how = sa && sa.source === 'located' ? 'from this PC\'s location' : 'typed by you'
+  if (stat) stat.innerHTML = sa
+    ? `${NEAR.hidden ? 'paused (hidden)' : 'visible'} around <b>${esc(sa.place)}</b> · ${sa.radius} km · ${how}${NEAR.area.on ? ` · ${NEAR.area.connections || 0} area connection${NEAR.area.connections===1?'':'s'}` : ''}`
+    : 'not sharing an area'
+  const people = NEAR.people || []
+  const anyOn = NEAR.lan.on || NEAR.area.on
+  $('#n-head').textContent = NEAR.hidden ? 'HIDDEN' : !anyOn ? 'NEARBY IS OFF' : people.length ? `${people.length} NEARBY` : 'LISTENING…'
+  const box = $('#n-people')
+  if (NEAR.hidden) { box.innerHTML = '<div class="empty">you\'re hidden from Nearby. switch it off above to see and be seen again.</div>'; return }
+  if (!anyOn) { box.innerHTML = '<div class="empty">turn on SAME NETWORK, or use LOCATE ME above. both are off until you choose.</div>'; return }
+  if (!people.length) { box.innerHTML = '<div class="empty">nobody nearby yet. leave this on: people appear as soon as they come online near you.</div>'; return }
+  box.innerHTML = ''
+  for (const p of people) {
+    if (!profFor(p.key) && p.name) rememberProfile(p.key, { name: p.name })
+    const where = [
+      p.lan ? '<span class="ntag">SAME NETWORK</span>' : '',
+      p.area ? `<span class="ntag">${p.area.km < 1 ? 'SAME TOWN' : '~' + p.area.km + ' KM'} · ${esc(p.area.place.toUpperCase())}</span>` : '',
+      p.verified ? '' : '<span class="ntag warn" title="their profile hasn\'t been fetched yet, so this card\'s key can\'t be checked against it">UNCONFIRMED</span>'
+    ].join('')
+    const followed = DATA.follows.includes(p.key)
+    const row = document.createElement('div'); row.className = 'nprow'; row.dataset.k = p.key
+    row.innerHTML = `${avatarHTML(p.key)}
+      <div class="npid"><span class="who" data-p="${p.key}">${esc(nameFor(p.key))}</span>
+        <span class="meta">@${p.key.slice(0,8)}</span><div style="display:flex;gap:6px;flex-wrap:wrap">${where}</div></div>
+      <button class="btn" data-a="prof">◍ PROFILE</button>
+      ${followed ? '' : '<button class="btn solid" data-a="follow">+ FOLLOW</button>'}
+      <button class="btn" data-a="dm">✉ DM</button>`
+    row.querySelector('.who').onclick = () => openProfile(p.key)
+    row.querySelector('[data-a=prof]').onclick = () => openProfile(p.key)
+    row.querySelector('[data-a=dm]').onclick = () => openDmInRail(p.key)
+    const fb = row.querySelector('[data-a=follow]')
+    if (fb) fb.onclick = async () => { await window.ember.follow(p.key); toast('FOLLOWING ' + nameFor(p.key).toUpperCase()); await refresh(); renderNearPeople() }
+    box.appendChild(row)
+  }
+}
+
+window.ember.onNearUpdated(async (hit) => {
+  if (VIEW === 'nearby') { NEAR = await window.ember.nearState(); renderNearPeople(); return }
+  if (hit) { $('#dot-nearby').classList.add('show'); toast(`◌ ${(hit.name || hit.key.slice(0, 8)).toUpperCase()} IS NEARBY`) }
+})
+// people expire when they stop being heard; keep the open page honest
+setInterval(async () => { if (VIEW === 'nearby') { NEAR = await window.ember.nearState(); renderNearPeople() } }, 10_000)
+
 async function renderSettings () {
   const s = await window.ember.getSettings()
   const mb = (s.storageBytes/1048576).toFixed(1)
@@ -1659,6 +1846,7 @@ function applyTheme (t) { document.body.dataset.theme = t }
 async function openProfile (key) {
   go('profile')
   const p = await window.ember.profilePage(key)
+  rememberProfile(key, p.profile)
   const name = p.profile&&p.profile.name ? p.profile.name : key.slice(0,10)
   const joined = p.joined ? new Date(p.joined).getFullYear() : '—'
   const page = $('#ppage')
@@ -1843,6 +2031,12 @@ async function renderStories () {
     own.querySelector('[data-act=see]').onclick = e => { e.stopPropagation(); openStories(mine) }
     own.querySelector('[data-act=add]').onclick = e => { e.stopPropagation(); $('#storyInput').click() }
     own.onclick = () => openStories(mine)
+    const menu = own.querySelector('.storymenu')
+    own.addEventListener('mouseenter', () => {
+      const r = own.getBoundingClientRect()
+      menu.style.left = (r.right - 6) + 'px'
+      menu.style.top = Math.max(4, Math.min(r.top, innerHeight - 90)) + 'px'
+    })
   } else {
     own.className = 'story add'
     own.innerHTML = `<div class="sav">+</div><div class="sn">your story</div>`

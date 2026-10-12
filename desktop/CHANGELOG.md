@@ -1,5 +1,42 @@
 # Changelog
 
+## v2.7.0 — Nearby
+- **NEARBY** (new tab, ◌). Discover finds people near you in *meaning*; Nearby
+  finds people near you in *space*. Both parts are opt-in and off by default.
+  - **Same network:** see who runs Ember on the same Wi-Fi or LAN, within
+    seconds. Ember sends a signed "I'm here" card on the local network only
+    (multicast + broadcast, TTL 1). Works with no internet at all, so it's
+    good for a classroom, a meetup or a café.
+  - **Same area:** LOCATE ME asks the PC where it is (Windows Location; GeoClue
+    on Linux when installed), snaps it to the nearest town in a bundled
+    offline list (49k towns, GeoNames) and shares **only that town**. The
+    exact position never leaves the computer, so distances can't be used to
+    triangulate anyone. No location on this PC? Type your town instead. Pick a
+    radius: 10, 25, 50 or 150 km. People who opted in nearby find each other
+    through a grid of DHT topics, and the radius is enforced on town centres.
+  - **Hide me from Nearby:** one switch, in the tab and in the tray menu,
+    stops both channels at once and keeps your choices for later. A signed
+    "bye" removes you from everyone's list immediately, instead of when your
+    last card expires.
+  - Every card is signed. A card signed with a key that isn't the person's
+    published one is dropped as an impersonation; one from someone whose
+    profile hasn't arrived yet is shown as UNCONFIRMED.
+  - Follow, DM or open the profile of anyone nearby. A toast and a dot on the
+    tab tell you when someone new appears.
+  - Desktop only for now; the protocol is shared, so Android can join later.
+- **Profile pages show names.** A stranger's own profile page listed their
+  posts under a hex key (`bc2477fe`) instead of their name: cards only looked
+  up names among the people you follow. Names now come from every profile the
+  app has loaded.
+- **Your story menu is no longer cut off.** Hovering your story tile opened
+  SEE STORY / ADD STORY inside the scrolling story rail, which clipped it; the
+  rest showed up at the bottom of the rail. It now opens fully beside the tile.
+- New title-bar line: SERVERLESS · YOUR PEOPLE, NOT AN AUDIENCE.
+- Tests: 78 protocol checks (23 new: card signatures and tampering, bye cards,
+  the area grid finding every pair within the radius across 8,000 random
+  pairs, the antimeridian), a three-peer SAME AREA run over a local DHT that
+  also checks bye (`npm run test:nearby`), and 52 UI cases (13 new).
+
 ## v2.6.2 — Debian/Ubuntu package
 - New `ember_<version>_amd64.deb` for Ubuntu/Debian: `sudo apt install ./ember_<version>_amd64.deb`.
   Installs to /opt/Ember with an `ember` command, app-menu entry and an

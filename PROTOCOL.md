@@ -36,6 +36,7 @@ cleared blocks are skipped, never waited on.
 | commons bucket | `sha256("ember/v1/commons")` |
 | reply thread | `sha256("ember/v1/replies/{author}/{seq}")` |
 | DM inbox | `sha256("ember/v1/dm/{author}")` |
+| nearby area (opt-in) | `sha256("ember/v1/area/{grid}:{row}:{col}")`, on a dedicated swarm |
 
 Gossip and DM connections speak newline-delimited JSON. Each connection is
 rate-limited (burst 60, refill 20 msg/s).
@@ -67,6 +68,33 @@ Receivers drop an announcement whose `sig` fails, or whose `sig2` is present
 and fails. Media fields are kept only when bound by `sig2` (or when the
 announcement is openly unsigned and shown as UNVERIFIED). A delete is applied
 only if signed by the key already tied to `author`.
+
+## Nearby (opt-in)
+A **near card** announces an identity on the local network or in an area:
+```
+{ via: 'lan'|'area'|'bye', key, edpk, name, ts, sig, [place, lat, lon] }   // place/lat/lon only for 'area'
+near = "ember/near/1|{via}|{key}|{edpk}|{name}|{place}|{lat}|{lon}|{ts}"   // place/lat/lon empty otherwise
+```
+`sig` is Ed25519 over `near` with the identity's signer key. Receivers drop
+cards that fail to verify, are more than 10 minutes off, carry `|` or control
+characters in `name`/`place`, or give `lat`/`lon` finer than 0.01° (a town
+centre). A card whose `edpk` differs from the key published in the author's
+profile is an impersonation and is dropped; a card from an author whose profile
+hasn't replicated yet is shown as unconfirmed. A `bye` card, sent on the
+channel being left when someone hides or switches it off, removes them from
+that channel at once (only if signed by the same key as their last card).
+
+**Same network.** Every 8 s, `{t:'ember-near', c:card}` is sent as UDP to
+`239.255.77.77:47777` (multicast, TTL 1) and to each interface's broadcast
+address on port 47777. Peers unheard for 45 s are dropped.
+
+**Same area.** Rows are 0.5° (`fine`) or 1.5° (`coarse`) of latitude; each row
+is split into `floor(360·cos(rowLat)/step)` columns, so cells are roughly
+square in km. A participant announces (`server`) in its own cell of both grids
+and looks up (`client`) the 3×3 block around it in the grid that covers its
+radius (`fine` up to 50 km, `coarse` up to 150 km). Anyone within one cell is
+always found; the chosen radius (10/25/50/150 km) is then enforced on town
+centres. On connect, and every 2 min, each side sends `{t:'near', c:card}`.
 
 ## Direct messages
 1. On connect both sides send `{t:'dmhello', v:2, key, chal}` (32 random bytes, hex).

@@ -115,6 +115,44 @@ function delMsg (author, seq, ts) { return `ember/del/1|${author}|${seq}|${ts}` 
 // identity key. Only a verified socket may receive our queued outbox.
 function dmProofMsg (chal, key) { return `ember/dm-proof/1|${chal}|${key}` }
 
+// ---- nearby ----
+// A "near card" says: this identity is on this network ('lan') or has opted
+// into an area ('area'). It is signed with the identity's published signer key,
+// so nobody can put someone else's key on the map. A 'bye' card (same shape as
+// 'lan') is sent when someone hides or turns a channel off, so they disappear
+// from other people's lists at once instead of when their last card expires. `place` is a town the user
+// picked from a bundled list (Ember never reads GPS); lat/lon are that town's
+// centre rounded to 0.01°. Name and place may not contain '|' or control
+// characters: a field could otherwise slide into its neighbour and still verify.
+const NEAR_TEXT = /^[^|\u0000-\u001f\u007f]*$/
+const round2 = (n) => Math.round(n * 100) / 100
+function nearText (s, max) { return String(s || '').replace(/[|\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max) }
+function makeNearCard ({ via, key, edpk, name, place, lat, lon, ts }) {
+  const c = { via, key, edpk, name: nearText(name, 40), ts }
+  if (via === 'area') { c.place = nearText(place, 80); c.lat = round2(lat); c.lon = round2(lon) }
+  return c
+}
+function nearMsg (c) {
+  const area = c.via === 'area' ? `${c.place}|${c.lat}|${c.lon}` : '||'
+  return `ember/near/1|${c.via}|${c.key}|${c.edpk}|${c.name}|${area}|${c.ts}`
+}
+function cleanNear (c, now) {
+  if (!c || typeof c !== 'object') return null
+  if (c.via !== 'lan' && c.via !== 'area' && c.via !== 'bye') return null
+  if (typeof c.key !== 'string' || !HEX64.test(c.key) || typeof c.edpk !== 'string' || !HEX64.test(c.edpk)) return null
+  if (typeof c.sig !== 'string' || c.sig.length > 120 || !B64.test(c.sig)) return null
+  if (!Number.isInteger(c.ts) || Math.abs(now - c.ts) > 10 * 60_000) return null
+  if (typeof c.name !== 'string' || c.name.length > 40 || !NEAR_TEXT.test(c.name)) return null
+  const out = { via: c.via, key: c.key, edpk: c.edpk, name: c.name, ts: c.ts, sig: c.sig }
+  if (c.via === 'area') {
+    if (typeof c.place !== 'string' || !c.place || c.place.length > 80 || !NEAR_TEXT.test(c.place)) return null
+    if (!Number.isFinite(c.lat) || !Number.isFinite(c.lon) || Math.abs(c.lat) > 90 || Math.abs(c.lon) > 180) return null
+    if (round2(c.lat) !== c.lat || round2(c.lon) !== c.lon) return null // finer than a town centre: refuse
+    out.place = c.place; out.lat = c.lat; out.lon = c.lon
+  } else if (c.place !== undefined || c.lat !== undefined || c.lon !== undefined) return null
+  return out
+}
+
 // DM payloads are wrapped {k:'t'|'i'|'v', d}. Unwrap for previews/notifications.
 function dmPreview (raw) {
   try {
@@ -126,4 +164,4 @@ function dmPreview (raw) {
   return String(raw || '').slice(0, 140)
 }
 
-module.exports = { PROTOCOL_VERSION, HEX64, SAFE_IMG, sha256hex, cleanKey, safeImg, cleanRef, cleanVideoMeta, normKind, sanitizeBlock, annExtras, annMsgV1, annMsgV2, cleanAnnMedia, delMsg, dmProofMsg, dmPreview }
+module.exports = { PROTOCOL_VERSION, HEX64, SAFE_IMG, sha256hex, cleanKey, safeImg, cleanRef, cleanVideoMeta, normKind, sanitizeBlock, annExtras, annMsgV1, annMsgV2, cleanAnnMedia, delMsg, dmProofMsg, dmPreview, makeNearCard, nearMsg, cleanNear }

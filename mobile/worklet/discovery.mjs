@@ -129,4 +129,44 @@ function cosine (a, b) {
   return d
 }
 
-export { commonsTopic, probeTopicsForText, embed, codes, topicsForText, replyTopic, cosine, TABLES, BITS, DIM }
+// ---------- nearby: proximity in SPACE (opt-in) ----------
+// The globe is cut into rows of equal height; each row is cut into cells that
+// are roughly square in km (wider in degrees towards the poles). Two grids:
+// FINE cells ≈ 55 km, COARSE cells ≈ 165 km. Everyone who opts in announces in
+// their own cell of BOTH grids, and looks up the 3×3 block around them in the
+// grid that covers their chosen radius. Anyone within one cell is therefore
+// always found; the radius itself is enforced client-side on town centres.
+const AREA_GRIDS = { fine: 0.5, coarse: 1.5 }
+const AREA_RADII = [10, 25, 50, 150]      // km choices offered to users
+function gridFor (radiusKm) { return radiusKm <= 50 ? 'fine' : 'coarse' }
+function areaCell (lat, lon, grid, dRow = 0, dCol = 0) {
+  const step = AREA_GRIDS[grid]
+  const rows = Math.round(180 / step)
+  const row = Math.min(rows - 1, Math.max(0, Math.floor((lat + 90) / step) + dRow))
+  const rowLat = -90 + (row + 0.5) * step
+  const cols = Math.max(1, Math.floor(360 * Math.max(0.05, Math.cos(rowLat * Math.PI / 180)) / step))
+  const col = ((Math.floor((lon + 180) / 360 * cols) + dCol) % cols + cols) % cols
+  return `${grid}:${row}:${col}`
+}
+function areaTopic (cell) { return crypto.createHash('sha256').update(`ember/v1/area/${cell}`).digest() }
+// → [{ cell, topic, server, client }]: announce where we are, look around us
+function areaTopics (lat, lon, radiusKm) {
+  const look = gridFor(radiusKm)
+  const out = new Map()
+  for (const g of Object.keys(AREA_GRIDS)) {
+    const c = areaCell(lat, lon, g)
+    out.set(c, { cell: c, server: true, client: g === look })
+  }
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    const c = areaCell(lat, lon, look, dr, dc)
+    if (!out.has(c)) out.set(c, { cell: c, server: false, client: true })
+  }
+  return [...out.values()].map(x => ({ ...x, topic: areaTopic(x.cell) }))
+}
+function distanceKm (aLat, aLon, bLat, bLon) {
+  const r = Math.PI / 180
+  const h = Math.sin((bLat - aLat) * r / 2) ** 2 + Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin((bLon - aLon) * r / 2) ** 2
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+
+export { commonsTopic, probeTopicsForText, embed, codes, topicsForText, replyTopic, cosine, TABLES, BITS, DIM, AREA_RADII, areaCell, areaTopics, distanceKm }

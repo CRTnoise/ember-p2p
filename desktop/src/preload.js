@@ -57,5 +57,12 @@ contextBridge.exposeInMainWorld('ember', {
   onRepliesUpdated: (cb) => ipcRenderer.on('replies-updated', (_e, id) => cb(id)),
   onPeers: (cb) => ipcRenderer.on('peers', (_e, n) => cb(n)),
   onGossipPeers: (cb) => ipcRenderer.on('gossip-peers', (_e, n) => cb(n)),
-  onBuckets: (cb) => ipcRenderer.on('buckets', (_e, n) => cb(n))
+  onBuckets: (cb) => ipcRenderer.on('buckets', (_e, n) => cb(n)),
+  nearState: () => ipcRenderer.invoke('near-state'),
+  nearSetLan: (on) => ipcRenderer.invoke('near-set-lan', { on }),
+  nearSetArea: (cfg) => ipcRenderer.invoke('near-set-area', cfg),
+  nearSearch: (q) => ipcRenderer.invoke('near-search', { q }),
+  nearLocate: (radius) => ipcRenderer.invoke('near-locate', { radius }),
+  nearSetHidden: (hidden) => ipcRenderer.invoke('near-set-hidden', { hidden }),
+  onNearUpdated: (cb) => ipcRenderer.on('near-updated', (_e, hit) => cb(hit))
 })

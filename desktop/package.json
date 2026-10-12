@@ -1,6 +1,6 @@
 {
   "name": "ember-desktop",
-  "version": "2.6.2",
+  "version": "2.7.0",
   "private": true,
   "description": "Serverless peer-to-peer social network — no servers, no accounts, discovery by meaning (desktop client)",
   "author": "CRTnoise",
@@ -9,6 +9,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node test/protocol.test.js",
+    "test:nearby": "node test/nearby-area.test.js",
     "build": "electron-builder --win --publish never",
     "build-linux": "electron-builder --linux --publish never"
   },

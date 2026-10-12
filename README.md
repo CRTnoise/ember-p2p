@@ -22,6 +22,12 @@ Discovery works by *meaning*: posts are hashed into buckets of nearby topics
 strangers writing about the same thing. Attention follows proximity, not
 popularity.
 
+**Nearby** (opt-in, off by default) adds proximity in *space*: see who runs
+Ember on the same Wi-Fi, or who opted in near your town. Ember asks your PC
+where it is, snaps that to the nearest town, and shares only the town: your
+exact position never leaves your computer. One switch (also in the tray) hides
+you from Nearby instantly.
+
 Status: **alpha**, built and tested between a handful of people across
 France and Algeria. Desktop is the reference client; Android works and
 interoperates with it.
@@ -31,6 +37,7 @@ interoperates with it.
 | Feeds | Hypercore append-only logs, replicated by followers (sliding tail window) |
 | Networking | Hyperswarm DHT with hole-punching. No Ember servers; joining the DHT contacts public HyperDHT bootstrap nodes |
 | Discovery | LSH buckets as swarm topics + a small-network commons bucket |
+| Nearby | opt-in: signed beacons on the local network, and grid-cell swarm topics around your town (PC location snapped to a town; only the town is shared) |
 | Posts | text with light markdown, images, video (desktop, transcoded with FFmpeg), quotes, replies, reposts, 24h stories |
 | Messages | end-to-end encrypted DMs (text, images, voice notes on desktop), offline queue, message requests |
 | Trust | Ed25519-signed posts, deletes and DM handshakes |

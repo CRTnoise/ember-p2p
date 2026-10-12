@@ -8,7 +8,7 @@
   const now = Date.now(), m = 60e3, h = 60 * m, d = 24 * h
   const K = (c) => c.repeat(64).slice(0, 64)
   const ME_KEY = K('a1f3'), MIRA = K('3b8e'), TOVAR = K('7c21'), OLAND = K('d40a'), ADA = K('5e9f'), NOOR = K('b6c3'), PAV = K('9a17')
-  const S1 = K('e2d4'), S2 = K('41fb'), S3 = K('c09e')
+  const S1 = K('e2d4'), S2 = K('41fb'), S3 = K('c09e'), STRANGER = K('8d2c'), LANP = K('6f0b')
 
   // ---------- procedural images ----------
   function canvas (w, hh, draw, type = 'image/jpeg', q = 0.88) {
@@ -130,7 +130,25 @@
     [TOVAR]: [{ from: TOVAR, to: ME_KEY, ts: now - 2 * h, text: env('t', 'the boring feed post did numbers, ironically') }],
     [PAV]: [{ from: PAV, to: ME_KEY, ts: now - 3 * d, text: env('t', 'hey! saw your post in the riso bucket') }]
   }
+  // a stranger: not followed, so the timeline never carries their profile
+  const strangerProfile = { name: 'altena', status: '' }
+  const strangerPosts = [{ author: STRANGER, seq: 0, ts: now - 41 * m, type: 'post', text: 'Hello World!' }]
+  let near = {
+    hidden: false,
+    saved: { lan: true, area: { place: 'Évry, FR', lat: 48.63, lon: 2.44, radius: 25, source: 'located' } },
+    lan: { on: true, error: null },
+    area: { on: true, place: 'Évry, FR', lat: 48.63, lon: 2.44, radius: 25, connections: 3 },
+    radii: [10, 25, 50, 150],
+    people: [
+      { key: LANP, name: 'room-404', edpk: K('11'), verified: false, lan: { seen: now - 4000 }, firstSeen: now - 60e3 },
+      { key: S2, name: 'linocut.lou', edpk: K('22'), verified: true, area: { seen: now - 9000, place: 'Paris, FR', km: 25 }, firstSeen: now - 9e5 }
+    ]
+  }
+  const places = [
+    { place: 'Évry, FR', lat: 48.63, lon: 2.44, pop: 51900 }, { place: 'Évreux, FR', lat: 49.02, lon: 1.15, pop: 51198 }
+  ]
   const stories = [
+    { author: ME_KEY, self: true, stories: [{ author: ME_KEY, seq: 30, caption: 'studio', ts: now - 1 * h }] },
     { author: MIRA, self: false, stories: [{ author: MIRA, seq: 50, caption: 'drying rack', ts: now - 2 * h }] },
     { author: OLAND, self: false, stories: [{ author: OLAND, seq: 20, caption: '', ts: now - 5 * h }] },
     { author: TOVAR, self: false, stories: [{ author: TOVAR, seq: 90, caption: '', ts: now - 9 * h }] }
@@ -144,7 +162,7 @@
   const ok = (v) => Promise.resolve(v)
   const noop = () => {}
   const emit = (fn, v, delay = 300) => setTimeout(() => fn(v), delay)
-  window.DEMO = { ME_KEY, MIRA, TOVAR }
+  window.DEMO = { ME_KEY, MIRA, TOVAR, STRANGER, LANP }
   window.ember = {
     me: () => ok({ key: ME_KEY, length: 32, profile: profiles[ME_KEY] }),
     timeline: () => ok({ items, profiles, follows: [MIRA, TOVAR, OLAND, ADA, NOOR], peers: 6, seeders: 4, replyCounts }),
@@ -153,7 +171,13 @@
     getMedia: (a, s) => ok(s === 40 ? riso : s === 11 ? pixel : null),
     getReplies: () => ok([]), stories: () => ok(stories),
     getStory: (a) => ok({ data: a === MIRA ? story('#ffd6e3', '#7aa2ff') : story('#2c2350', '#ffb347'), caption: '', ts: now }),
-    profilePage: (k) => ok({ key: k, self: k === ME_KEY, profile: profiles[k], joined: now - 90 * d, stats: { posts: 41, following: 5, blocks: 120 }, posts: items.filter(i => i.author === k), isFollowed: true }),
+    profilePage: (k) => ok({ key: k, self: k === ME_KEY, profile: profiles[k] || (k === STRANGER ? strangerProfile : null), joined: now - 90 * d, stats: { posts: 41, following: 5, blocks: 120 }, posts: k === STRANGER ? strangerPosts : items.filter(i => i.author === k), isFollowed: k !== STRANGER }),
+    nearState: () => ok(near),
+    nearSetLan: (on) => { near = { ...near, lan: { on, error: null }, saved: { ...near.saved, lan: on } }; return ok(near) },
+    nearSetArea: (c) => { near = { ...near, area: c ? { on: true, connections: 0, ...c } : { on: false }, saved: { ...near.saved, area: c } }; return ok(near) },
+    nearSetHidden: (h) => { near = { ...near, hidden: h, people: h ? [] : near.people }; return ok(near) },
+    nearLocate: (r) => window.__locateFails ? ok({ error: 'denied', state: near }) : (near = { ...near, saved: { ...near.saved, area: { place: 'Évry, FR', lat: 48.63, lon: 2.44, radius: r, source: 'located' } } }, ok({ town: { place: 'Évry, FR', km: 1 }, state: near })),
+    nearSearch: (q) => ok(q ? places : []),
     dmList: () => ok([
       { key: MIRA, last: threads[MIRA][4], count: 5, request: false },
       { key: TOVAR, last: threads[TOVAR][0], count: 1, request: false },
@@ -172,6 +196,6 @@
   for (const n of ['post', 'reply', 'setProfile', 'follow', 'unfollow', 'repost', 'postVideo', 'getVideo', 'deletePost', 'postStory',
     'block', 'mute', 'unblock', 'unmute', 'exportIdentity', 'restoreIdentity', 'dmAccept', 'dmIgnore', 'dmSend', 'savePost', 'unsavePost', 'clearCache',
     'winMin', 'winMax', 'winClose']) if (!window.ember[n]) window.ember[n] = () => ok(true)
-  for (const n of ['onTranscodeProgress', 'onVideoProgress', 'onNotif', 'onEngineReady', 'onDmReceived', 'onDmPeers', 'onFeedUpdated', 'onDiscoverUpdated', 'onRepliesUpdated'])
+  for (const n of ['onTranscodeProgress', 'onVideoProgress', 'onNotif', 'onEngineReady', 'onDmReceived', 'onDmPeers', 'onFeedUpdated', 'onDiscoverUpdated', 'onRepliesUpdated', 'onNearUpdated'])
     if (!window.ember[n]) window.ember[n] = noop
 })()
