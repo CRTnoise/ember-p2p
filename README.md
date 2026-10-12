@@ -7,7 +7,7 @@
 
 ### Quick start (about 30 seconds)
 1. **Download** from the [latest release](https://github.com/CRTnoise/ember-p2p/releases/latest):
-   `Ember-Setup-x.y.z.exe` (Windows installer), `Ember-x.y.z-portable.exe` (Windows, no install) or `Ember-x.y.z.AppImage` (Linux, run `chmod +x` on it first).
+   `Ember-Setup-x.y.z.exe` (Windows installer), `Ember-x.y.z-portable.exe` (Windows, no install), `ember_x.y.z_amd64.deb` (Ubuntu/Debian: `sudo apt install ./ember_x.y.z_amd64.deb`) or `Ember-x.y.z.AppImage` (other Linux, run `chmod +x` on it first).
 2. **Run it.** The build isn't code-signed yet, so Windows will say "Windows protected your PC": click **More info → Run anyway**.
 3. **Allow Ember on private *and* public networks** when Windows asks, or it can't find anyone.
 
@@ -70,7 +70,8 @@ Grab the latest build from the **[Releases](../../releases)** page:
 |---|---|
 | Windows (installer) | `Ember-Setup-<version>.exe` |
 | Windows (no install) | `Ember-<version>-portable.exe` |
-| Linux | `Ember-<version>.AppImage` (`chmod +x` it, then run) |
+| Ubuntu / Debian | `ember_<version>_amd64.deb` (`sudo apt install ./ember_<version>_amd64.deb`) |
+| Linux (any distro) | `Ember-<version>.AppImage` (`chmod +x` it, then run) |
 
 Builds aren't code-signed yet, so Windows SmartScreen will warn
 "Windows protected your PC": click **More info → Run anyway**. Each release
@@ -86,7 +87,7 @@ npm install
 npm start            # run it
 npm test             # protocol test suite
 npm run build        # Windows → desktop/dist/Ember-Setup-<v>.exe + portable .exe
-npm run build-linux  # Linux   → desktop/dist/Ember-<v>.AppImage
+npm run build-linux  # Linux   → desktop/dist/Ember-<v>.AppImage + ember_<v>_amd64.deb
 ```
 Build Windows binaries on Windows and Linux binaries on Linux. Android needs
 its own toolchain: follow [mobile/README.md](mobile/README.md).

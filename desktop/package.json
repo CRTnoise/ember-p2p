@@ -71,14 +71,30 @@
     },
     "linux": {
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb"
       ],
       "icon": "build/icon.png",
       "category": "Network",
+      "executableName": "ember",
+      "maintainer": "CRTnoise <288690692+CRTnoise@users.noreply.github.com>",
+      "synopsis": "Serverless peer-to-peer social network",
       "artifactName": "Ember-${version}.${ext}",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "Ember",
+          "Keywords": "p2p;social;chat;messages;"
+        }
+      }
     },
-    "publish": null
+    "publish": null,
+    "deb": {
+      "artifactName": "ember_${version}_${arch}.${ext}",
+      "packageCategory": "net",
+      "priority": "optional"
+    }
   },
-  "desktopName": "ember.desktop"
+  "desktopName": "ember.desktop",
+  "homepage": "https://github.com/CRTnoise/ember-p2p"
 }
