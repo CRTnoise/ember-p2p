@@ -144,3 +144,7 @@ Copyright (C) 2026 CRTnoise. Ember is free software under the
 share it, and anything you distribute that's built from it must stay open
 under the same terms. Desktop builds bundle FFmpeg (also GPL); see
 [NOTICE.md](NOTICE.md).
+Ember is a non-commercial tool, not a service: its author runs no server, holds
+no user data and cannot see or remove what people publish with it. It comes with
+no warranty, and each user is responsible for what they publish. See
+[LEGAL.md](LEGAL.md) (in English and French).
