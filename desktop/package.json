@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "serve": "node src/main.js",
-    "test": "node test/protocol.test.js && node test/taste.test.js && node test/fires.test.js && node test/web.test.js",
+    "test": "node test/protocol.test.js && node test/taste.test.js && node test/languages.test.js && node test/fires.test.js && node test/web.test.js",
     "test:nearby": "node test/nearby-area.test.js",
     "build": "electron-builder --win --publish never",
     "build-linux": "electron-builder --linux --publish never"

@@ -1,7 +1,10 @@
 {
  "_meta": {
   "language": "العربية",
-  "note": "Keys are the exact English interface strings (whitespace folded). Patterns are regular expressions over the English string; $1.. are its groups. Missing keys fall back to English. List what is missing with: npx electron test/ui/i18n-collect.js ar"
+  "label": "العربية",
+  "dir": "rtl",
+  "script": "ar",
+  "note": "Keys are the exact English interface strings (whitespace folded). Patterns are regular expressions over the English string; $1.. are its groups. Missing keys fall back to English. To add a language, copy this file to <code>.json (e.g. es.json) in src/i18n/, or in the i18n folder shown in SETUP › LANGUAGE, and restart Ember. _meta: language = its own name, label = the button text, dir = ltr or rtl, script = latin, cyrillic, zh or ar (for ONLY POSTS I CAN READ). List what is missing with: npx electron test/ui/i18n-collect.js ar"
  },
  "strings": {
   "SERVERLESS · YOUR PEOPLE, NOT AN AUDIENCE": "بلا خوادم · جماعتك، لا جمهور",
@@ -235,10 +238,12 @@
   "LANGUAGE": "اللغة",
   "INTERFACE": "الواجهة",
   "the language Ember speaks to you in. posts stay in the language they were written in.": "اللغة التي يخاطبك بها Ember. تبقى المنشورات باللغة التي كُتبت بها.",
+  "ADD A LANGUAGE": "إضافة لغة",
+  "copy a translation file (for example fr.json, renamed to your language's code) into this folder on the computer running Ember, translate it, then restart Ember. Anything left out stays in English.": "انسخ ملف ترجمة (مثل fr.json، بعد إعادة تسميته برمز لغتك) إلى هذا المجلد على الكمبيوتر الذي يشغّل Ember، وترجمه، ثم أعد تشغيل Ember. ما لم يُترجم يبقى بالإنجليزية.",
   "LANGUAGES I READ": "اللغات التي أقرأها",
   "used to tune Discover and to read your topics' seed words in the right languages": "تُستخدم لضبط «اكتشف» وقراءة كلمات مواضيعك باللغات المناسبة",
   "ONLY POSTS I CAN READ": "المنشورات التي أستطيع قراءتها فقط",
-  "hide Discover posts written in a script you don't read (Latin, Chinese, Arabic)": "إخفاء منشورات «اكتشف» المكتوبة بخط لا تقرؤه (لاتيني، صيني، عربي)",
+  "hide Discover posts written in a script you don't read (Latin, Cyrillic, Chinese, Arabic)": "إخفاء منشورات «اكتشف» المكتوبة بخط لا تقرؤه (لاتيني، سيريلي، صيني، عربي)",
   "WHAT YOU'RE INTO": "ما يهمّك",
   "TOPICS": "المواضيع",
   "each topic is a room on the network: you sit in it, posts about it reach you. Ember also sits in two random decoy rooms, so nobody watching can tell which ones are really yours.": "كل موضوع غرفة على الشبكة: تجلس فيها وتصلك المنشورات عنها. ويجلس Ember أيضًا في غرفتين للتمويه يختارهما عشوائيًا، كي لا يعرف أي مراقب أيّها اهتماماتك فعلًا.",

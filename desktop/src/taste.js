@@ -2,7 +2,7 @@
 //
 //   topics   named rooms on the network (sha256("ember/v1/topic/{id}")). Picking
 //            a topic joins its room; posting about a topic (recognised in EN, FR,
-//            ZH or AR) also sends the post into that room. Rooms are reliable
+//            ZH, AR or RU) also sends the post into that room. Rooms are reliable
 //            where LSH buckets alone are too coarse to meet in.
 //   compass  a direction in meaning-space learned from what you post, reply to,
 //            save, mute or mark "not interested". It decays (a few weeks), so
@@ -19,7 +19,10 @@ const disc = require('./discovery')
 
 const CATALOG = JSON.parse(fs.readFileSync(path.join(__dirname, 'topics.json'), 'utf8')).topics
 const BY_ID = new Map(CATALOG.map(t => [t.id, t]))
-const LANGS = ['en', 'fr', 'zh', 'ar']
+const LANGS = ['en', 'fr', 'zh', 'ar', 'ru']   // the languages topics.json has seeds for
+// the script each language is written in, for "only posts I can read". A
+// translation added later says its own script in its _meta (see languages.js).
+const SCRIPTS = { en: 'latin', fr: 'latin', zh: 'zh', ar: 'ar', ru: 'cyrillic' }
 const TAU = 21 * 86_400_000   // compass memory: weights halve in ~2 weeks
 const MAX_TERMS = 400
 
@@ -80,23 +83,25 @@ function classify (text, max = 2) { return classify2(String(text || '')).slice(0
 function scriptOf (text) {
   const s = String(text || '')
   const han = (s.match(/[㐀-鿿]/g) || []).length, ara = (s.match(/[؀-ۿ]/g) || []).length, lat = (s.match(/[A-Za-zÀ-ÿ]/g) || []).length
+  const cyr = (s.match(/[Ѐ-ӿ]/g) || []).length
   if (han >= 2 && han >= lat / 4) return 'zh'
   if (ara >= 3 && ara >= lat / 2) return 'ar'
+  if (cyr >= 3 && cyr >= lat / 2) return 'cyrillic'
   return lat ? 'latin' : 'other'
 }
-function readable (text, langs) {
+// scripts: extra { lang: script } for languages SCRIPTS doesn't know (unknown = latin)
+function readable (text, langs, scripts = {}) {
   const s = scriptOf(text)
-  if (s === 'zh') return langs.includes('zh')
-  if (s === 'ar') return langs.includes('ar')
-  if (s === 'latin') return langs.includes('en') || langs.includes('fr')
-  return true
+  if (s === 'other') return true
+  return langs.some(l => (scripts[l] || SCRIPTS[l] || 'latin') === s)
 }
 
 // ---- compass ----
 const STOP = new Set(('the a an and or but of to in on at for with from by is are was were be been it its this that i you he she we they my your our me us so not no do does did have has had will would can could should just about into very really like get got one all any some more most what when where who why how than then there here also too ' +
   'new now today tonight time make made want need going still even much many well way thing things day first last back good great lot dont im ive its youre thats there their them then '+
   'le la les un une des du de et ou mais dans sur pour avec par est sont il elle ils elles nous vous je tu ce cette ces son sa ses que qui pas ne plus tout tous très aussi bien encore ça fait faire suis être avoir mon ma mes ton ta tes nouveau nouvelle aujourd hui ' +
-  'في من على الى إلى عن مع هذا هذه ذلك التي الذي هو هي انا أنا انت أنت نحن هم كان كانت لا ما لم لن قد كل بعد قبل ثم او أو اليوم').split(' '))
+  'في من على الى إلى عن مع هذا هذه ذلك التي الذي هو هي انا أنا انت أنت نحن هم كان كانت لا ما لم لن قد كل بعد قبل ثم او أو اليوم ' +
+  'и в во не что он на я с со как а то все она так его но да ты к у же вы за бы по только ее её мне было вот от меня еще ещё нет о из ему теперь когда даже ну вдруг ли если уже или ни быть был была были него до вас нибудь опять уж вам ведь там потом себя ничего ей может они тут где есть надо ней для мы тебя их чем сам без будто чего раз тоже себе под будет ж тогда кто этот того потому этого какой совсем ним здесь этом один почти мой тем чтобы нее неё сейчас куда зачем всех никогда можно при наконец два об другой хоть после над больше тот через эти нас про всего них какая много разве три эту моя впрочем хорошо свою этой перед иногда лучше чуть том нельзя такой им более всегда конечно всю между это эта сегодня очень просто').split(' '))
 function keyTerms (text) {
   const out = new Set()
   for (const w of words(text)) {
@@ -208,4 +213,4 @@ function why (item, ctx) {
   return { k: 'wide' }
 }
 
-module.exports = { CATALOG, LANGS, Taste, embedOf, topicTopic, classify, topicHits, keyTerms, scriptOf, readable, compassTopics, rank, why }
+module.exports = { CATALOG, LANGS, SCRIPTS, Taste, embedOf, topicTopic, classify, topicHits, keyTerms, scriptOf, readable, compassTopics, rank, why }

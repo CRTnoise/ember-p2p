@@ -30,7 +30,9 @@ share a topic room at the same moment, a **campfire** lights: a live chat that
 leaves no trace. Moderation is yours: block, mute, or subscribe to the
 blocklists of people you trust.
 
-Ember speaks **English, French, Chinese and Arabic** (right-to-left included).
+Ember speaks **English, French, Chinese, Arabic and Russian** (right-to-left included),
+and you can add your own language by dropping a translation file into its data
+folder ([how](desktop/README.md#translating)).
 
 **Use it in a browser, or self-host it.** Turn on SETUP › WEB ACCESS and pair a
 browser (or your phone, on the same Wi-Fi) with a code. Or run Ember with no
@@ -61,7 +63,7 @@ interoperates with it.
 | Discovery | LSH buckets as swarm topics, named topic rooms (with decoys), a local compass with a FAMILIAR ↔ STRANGE dial, a small-network commons trickle |
 | Campfires | live rooms that light when 3+ people share a topic room; signed, memory-only |
 | Moderation | personal blocks and mutes, optional shared blocklists, subscriptions, your circle's lists as a quiet signal |
-| Languages | English, French, Chinese, Arabic (RTL) |
+| Languages | English, French, Chinese, Arabic (RTL), Russian; more by dropping in a translation file |
 | Web / self-hosted | the same interface in any browser (paired with a code); `npm run serve` runs a headless node under plain Node |
 | Nearby | opt-in: signed beacons on the local network, and grid-cell swarm topics around your town (PC location snapped to a town; only the town is shared) |
 | Posts | text with light markdown, images, video (desktop, transcoded with FFmpeg), quotes, replies, reposts, 24h stories |

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- **Русский.** Ember now speaks Russian: the whole interface, topic names and
+  seed words (so Discover recognises posts written in Russian), Russian stop
+  words for the compass, and Cyrillic in ONLY POSTS I CAN READ.
+- **Add your own language.** Languages are no longer listed in the code: Ember
+  offers every translation file it finds. Copy `fr.json` into the `i18n` folder
+  of your data folder (shown in SETUP › LANGUAGE), rename it to your language's
+  code, translate it and restart: it appears in the language pickers. Missing
+  strings stay in English. Each file says its own name, button label, text
+  direction and script in `_meta`. See desktop/README.md › Translating.
+- Tests: a languages suite (shipped and dropped-in files, overrides, bad files,
+  every translation covers the same strings), Cyrillic in the taste suite, and
+  2 new UI cases (84 in all).
+
 ## v2.9.0 — Ember in a browser, and self-hosted
 - **Use Ember in a browser.** SETUP › WEB ACCESS serves the same interface to
   web browsers. Every browser pairs once with an 8-digit code (OPEN IN BROWSER

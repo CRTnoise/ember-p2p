@@ -1,7 +1,10 @@
 {
  "_meta": {
   "language": "Français",
-  "note": "Keys are the exact English interface strings (whitespace folded). Patterns are regular expressions over the English string; $1.. are its groups. Missing keys fall back to English. List what is missing with: npx electron test/ui/i18n-collect.js fr"
+  "label": "FRANÇAIS",
+  "dir": "ltr",
+  "script": "latin",
+  "note": "Keys are the exact English interface strings (whitespace folded). Patterns are regular expressions over the English string; $1.. are its groups. Missing keys fall back to English. To add a language, copy this file to <code>.json (e.g. es.json) in src/i18n/, or in the i18n folder shown in SETUP › LANGUAGE, and restart Ember. _meta: language = its own name, label = the button text, dir = ltr or rtl, script = latin, cyrillic, zh or ar (for ONLY POSTS I CAN READ). List what is missing with: npx electron test/ui/i18n-collect.js fr"
  },
  "strings": {
   "SERVERLESS · YOUR PEOPLE, NOT AN AUDIENCE": "SANS SERVEUR · TES GENS, PAS UN PUBLIC",
@@ -235,10 +238,12 @@
   "LANGUAGE": "LANGUE",
   "INTERFACE": "INTERFACE",
   "the language Ember speaks to you in. posts stay in the language they were written in.": "la langue dans laquelle Ember te parle. les posts restent dans la langue où ils ont été écrits.",
+  "ADD A LANGUAGE": "AJOUTER UNE LANGUE",
+  "copy a translation file (for example fr.json, renamed to your language's code) into this folder on the computer running Ember, translate it, then restart Ember. Anything left out stays in English.": "copie un fichier de traduction (par exemple fr.json, renommé avec le code de ta langue) dans ce dossier sur l'ordinateur qui fait tourner Ember, traduis-le, puis redémarre Ember. Ce qui manque reste en anglais.",
   "LANGUAGES I READ": "LANGUES QUE JE LIS",
   "used to tune Discover and to read your topics' seed words in the right languages": "sert à régler Découvrir et à lire les mots-clés de tes sujets dans les bonnes langues",
   "ONLY POSTS I CAN READ": "SEULEMENT LES POSTS QUE JE PEUX LIRE",
-  "hide Discover posts written in a script you don't read (Latin, Chinese, Arabic)": "masquer dans Découvrir les posts écrits dans une écriture que tu ne lis pas (latine, chinoise, arabe)",
+  "hide Discover posts written in a script you don't read (Latin, Cyrillic, Chinese, Arabic)": "masquer dans Découvrir les posts écrits dans une écriture que tu ne lis pas (latine, cyrillique, chinoise, arabe)",
   "WHAT YOU'RE INTO": "CE QUI TE PLAÎT",
   "TOPICS": "SUJETS",
   "each topic is a room on the network: you sit in it, posts about it reach you. Ember also sits in two random decoy rooms, so nobody watching can tell which ones are really yours.": "chaque sujet est un salon sur le réseau : tu y es, et les posts qui en parlent t'arrivent. Ember se place aussi dans deux salons leurres choisis au hasard, pour que personne ne puisse savoir lesquels sont vraiment les tiens.",

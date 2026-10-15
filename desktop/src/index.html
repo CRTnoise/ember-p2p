@@ -876,7 +876,7 @@
     <div class="oblogo"><div class="mark"></div><span class="word">EMBER</span></div>
 
     <div class="obstep on" id="ob0">
-      <div class="obh" data-noi18n>LANGUAGE · LANGUE · 语言 · اللغة</div>
+      <div class="obh" id="obLangHead" data-noi18n>LANGUAGE</div>
       <div class="langpick" id="obLangs"></div>
       <div class="oblabel" id="obReadLabel">I ALSO READ</div>
       <div class="chips" id="obRead"></div>
@@ -1086,7 +1086,11 @@ function shrinkImage (file, maxFull=900, maxThumb=96) {
 // English is the source text. Other languages are dictionaries keyed by the
 // exact English string (whitespace folded), plus a few patterns for strings with
 // numbers in them. Text people wrote (posts, names, messages) is never touched.
-const UI_LANGS = { en: ['ENGLISH', 'English'], fr: ['FRANÇAIS', 'Français'], zh: ['中文', '简体中文'], ar: ['العربية', 'عربي'] }
+// The languages on offer come from the engine (one file each, see languages.js).
+const EN_LANG = { code: 'en', name: 'English', label: 'ENGLISH', dir: 'ltr', words: {} }
+const uiLangs = () => Array.isArray(TASTE.uiLangs) && TASTE.uiLangs.length ? TASTE.uiLangs : [EN_LANG]
+const langOf = code => uiLangs().find(l => l.code === code)
+const langWord = (code, k) => { const l = langOf(code); return (l && l.words && l.words[k]) || k }
 let LANG = 'en', I18N = null, I18N_PATS = []
 let TASTE = { catalog: [], topics: [], terms: [], avoid: [], dial: 1, readLangs: ['en'], onboarded: true, campfires: true }
 const I18N_SKIP = '.word,.body,.who,.pname,.bubble,.state,.pstatus,.scap,.fmtext,.fwho,.k,.obkey,.keymini,.nsub,.daysep,#irWho,#irlist .n,#irlist .p,#dmlist .n,#dmlist .p,[data-noi18n],script,style,textarea,code'
@@ -1125,10 +1129,10 @@ function trTree (root) {
 }
 let MO = null
 async function setLanguage (lang) {
-  LANG = UI_LANGS[lang] ? lang : 'en'
+  LANG = langOf(lang) ? lang : 'en'
   try { localStorage.setItem('emberLang', LANG) } catch {}
   document.documentElement.lang = LANG
-  document.documentElement.dir = LANG === 'ar' ? 'rtl' : 'ltr'
+  document.documentElement.dir = langOf(LANG).dir === 'rtl' ? 'rtl' : 'ltr'
   if (LANG === 'en') return
   const d = await window.ember.i18n(LANG)
   if (!d) return
@@ -1145,9 +1149,13 @@ async function setLanguage (lang) {
     MO.observe(document.body, { childList: true, subtree: true, characterData: true })
   }
 }
-const topicLabel = id => { const t = TASTE.catalog.find(x => x.id === id); if (!t) return id; const l = t.label[LANG] || t.label.en; return LANG === 'fr' || LANG === 'en' ? l.toUpperCase() : l }
+// a language without labels in topics.json can still translate them, as plain strings
+const topicLabel = id => { const t = TASTE.catalog.find(x => x.id === id); if (!t) return id; return (t.label[LANG] || tr(t.label.en)).toUpperCase() }
 async function loadTaste () { try { TASTE = await window.ember.tasteState() } catch {} return TASTE }
-function guessLang () { const n = (navigator.language || 'en').slice(0, 2).toLowerCase(); return UI_LANGS[n] ? n : 'en' }
+function guessLang () {
+  const full = (navigator.language || 'en').toLowerCase(), n = full.slice(0, 2)
+  return langOf(full) ? full : langOf(n) ? n : 'en'
+}
 
 /* ============ NAVIGATION ============ */
 
@@ -2006,8 +2014,8 @@ async function renderSettings () {
        <div class="tl">${k.toUpperCase()}</div></div>`).join('')
   await loadTaste()
   const T = TASTE
-  const langChips = Object.entries(UI_LANGS).map(([k, v]) => `<button class="chip ${k===LANG?'on':''}" data-ui="${k}" data-noi18n>${v[0]}</button>`).join('')
-  const readChips = Object.entries(UI_LANGS).map(([k, v]) => `<button class="chip ${T.readLangs.includes(k)?'on':''}" data-rd="${k}" data-noi18n>${v[0]}</button>`).join('')
+  const langChips = uiLangs().map(l => `<button class="chip ${l.code===LANG?'on':''}" data-ui="${attr(l.code)}" data-noi18n>${esc(l.label)}</button>`).join('')
+  const readChips = uiLangs().map(l => `<button class="chip ${T.readLangs.includes(l.code)?'on':''}" data-rd="${attr(l.code)}" data-noi18n>${esc(l.label)}</button>`).join('')
   const topicChips = T.catalog.map(t => `<button class="chip ${T.topics.includes(t.id)?'on':''}" data-tp="${t.id}" data-noi18n>${esc(topicLabel(t.id))}</button>`).join('')
   const termChips = T.terms.length ? T.terms.map(x => `<button class="chip term" data-term="${attr(x.term)}" title="remove from your compass"><span data-noi18n>${esc(x.term)}</span><span class="x">×</span></button>`).join('')
     : '<span class="sd">empty for now: it fills in as you post, reply, repost and save.</span>'
@@ -2018,11 +2026,14 @@ async function renderSettings () {
     <div class="setrow"><div class="sl"><div class="st">INTERFACE</div>
       <div class="sd">the language Ember speaks to you in. posts stay in the language they were written in.</div></div>
       <div class="chips">${langChips}</div></div>
+    ${T.i18nDir ? `<div class="setrow col"><div class="sl"><div class="st">ADD A LANGUAGE</div>
+      <div class="sd">copy a translation file (for example fr.json, renamed to your language's code) into this folder on the computer running Ember, translate it, then restart Ember. Anything left out stays in English.</div>
+      <div class="weburl" data-noi18n>${esc(T.i18nDir)}</div></div></div>` : ''}
     <div class="setrow"><div class="sl"><div class="st">LANGUAGES I READ</div>
       <div class="sd">used to tune Discover and to read your topics' seed words in the right languages</div></div>
       <div class="chips">${readChips}</div></div>
     <div class="setrow"><div class="sl"><div class="st">ONLY POSTS I CAN READ</div>
-      <div class="sd">hide Discover posts written in a script you don't read (Latin, Chinese, Arabic)</div></div>${sw('s-onlylangs', T.onlyMyLangs)}</div>
+      <div class="sd">hide Discover posts written in a script you don't read (Latin, Cyrillic, Chinese, Arabic)</div></div>${sw('s-onlylangs', T.onlyMyLangs)}</div>
     <div class="sethead">WHAT YOU'RE INTO</div>
     <div class="setrow col" id="s-topics"><div class="sl"><div class="st">TOPICS</div>
       <div class="sd">each topic is a room on the network: you sit in it, posts about it reach you. Ember also sits in two random decoy rooms, so nobody watching can tell which ones are really yours.</div></div>
@@ -2831,13 +2842,15 @@ function obGo (n) {
 let OB_LANG = null, OB_READ = new Set()
 function drawObLangs () {
   if (!OB_LANG) { OB_LANG = TASTE.uiLang || guessLang(); OB_READ = new Set(TASTE.readLangs && TASTE.readLangs.length && TASTE.uiLang ? TASTE.readLangs : [OB_LANG]) }
-  $('#obLangs').innerHTML = Object.entries(UI_LANGS).map(([k, v]) => `<button class="langbtn ${k===OB_LANG?'on':''}" data-l="${k}" data-noi18n>${v[0]}<small>${k.toUpperCase()}</small></button>`).join('')
-  $('#obRead').innerHTML = Object.entries(UI_LANGS).map(([k, v]) => `<button class="chip ${OB_READ.has(k)?'on':''}" data-r="${k}" data-noi18n>${v[1]}</button>`).join('')
-  const READ = { en: 'I ALSO READ', fr: 'JE LIS AUSSI', zh: '我也能读', ar: 'أقرأ أيضًا' }
-  const GO = { en: 'CONTINUE →', fr: 'CONTINUER →', zh: '继续 →', ar: '← متابعة' }
-  $('#obReadLabel').textContent = READ[OB_LANG]; $('#obReadLabel').dataset.noi18n = ''
-  $('#obLangGo').textContent = GO[OB_LANG]; $('#obLangGo').dataset.noi18n = ''
-  document.documentElement.dir = OB_LANG === 'ar' ? 'rtl' : 'ltr'
+  if (!langOf(OB_LANG)) OB_LANG = 'en'
+  const langs = uiLangs()
+  // "LANGUAGE" in every language on offer (each one's own word for it)
+  $('#obLangHead').textContent = [...new Set(langs.map(l => langWord(l.code, 'LANGUAGE')))].join(' · ')
+  $('#obLangs').innerHTML = langs.map(l => `<button class="langbtn ${l.code===OB_LANG?'on':''}" data-l="${attr(l.code)}" data-noi18n>${esc(l.label)}<small>${esc(l.code.toUpperCase())}</small></button>`).join('')
+  $('#obRead').innerHTML = langs.map(l => `<button class="chip ${OB_READ.has(l.code)?'on':''}" data-r="${attr(l.code)}" data-noi18n>${esc(l.name)}</button>`).join('')
+  $('#obReadLabel').textContent = langWord(OB_LANG, 'I ALSO READ'); $('#obReadLabel').dataset.noi18n = ''
+  $('#obLangGo').textContent = langWord(OB_LANG, 'CONTINUE →'); $('#obLangGo').dataset.noi18n = ''
+  document.documentElement.dir = langOf(OB_LANG).dir === 'rtl' ? 'rtl' : 'ltr'
   $('#obLangs').querySelectorAll('[data-l]').forEach(b => b.onclick = () => { const was = OB_LANG; OB_LANG = b.dataset.l; OB_READ.delete(was); OB_READ.add(OB_LANG); drawObLangs() })
   $('#obRead').querySelectorAll('[data-r]').forEach(b => b.onclick = () => { const l = b.dataset.r; if (l === OB_LANG) return; OB_READ.has(l) ? OB_READ.delete(l) : OB_READ.add(l); drawObLangs() })
 }

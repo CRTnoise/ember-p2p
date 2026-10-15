@@ -62,9 +62,9 @@ default, localhost only unless you allow other devices on your network.
 
 ## Test
 ```bash
-npm test                    # protocol (sanitizer, signatures, DM proof, deletes, nearby), taste (topics, compass, dial), campfires, web access
+npm test                    # protocol (sanitizer, signatures, DM proof, deletes, nearby), taste (topics, compass, dial), languages, campfires, web access
 npm run test:nearby         # SAME AREA end to end over a private local DHT (three peers)
-npx electron test/ui/run.js # UI suite: clicks through the real interface (82 cases)
+npx electron test/ui/run.js # UI suite: clicks through the real interface (84 cases)
 ```
 
 ## Build
@@ -97,10 +97,11 @@ download the files from the run's artifacts.
 | `src/protocol.js` | **trust boundary**: sanitizer, signature formats, key cleaning, DM proof. Canonical copy shared with mobile |
 | `src/discovery.js` | LSH embedding + bucket topics, nearby area grid (shared with mobile) |
 | `src/nearby.js` | NEARBY: same-network beacons, same-area swarm, PC location → nearest town, town search |
-| `src/taste.js` | topics (recognised in EN/FR/ZH/AR), the local compass, the FAMILIAR ↔ STRANGE dial, "why am I seeing this" |
-| `src/topics.json` | the topic catalog: ids, labels and seed words in four languages |
+| `src/taste.js` | topics (recognised in EN/FR/ZH/AR/RU), the local compass, the FAMILIAR ↔ STRANGE dial, "why am I seeing this" |
+| `src/topics.json` | the topic catalog: ids, labels and seed words in five languages |
 | `src/fires.js` | CAMPFIRES: live rooms over gossip connections, signed, memory-only |
 | `src/i18n/*.json` | interface translations (English is the source text) |
+| `src/languages.js` | finds the interface languages: shipped files plus any in the data folder's `i18n/` |
 | `src/web.js` | WEB ACCESS: serves the interface to paired browsers (pairing, sessions, guards, events, uploads) |
 | `src/web-shim.js` | `window.ember` for a browser: the preload API over HTTP + server-sent events |
 | `src/headless.js` | stands in for Electron when Ember runs under plain Node (`npm run serve`) |
@@ -113,14 +114,44 @@ After editing `protocol.js`, `discovery.js` or `dm.js`, run
 `node ../tools/sync-shared.js` so mobile gets the identical code.
 
 ## Translating
-The interface is written in English; every other language is a dictionary in
-`src/i18n/<lang>.json` keyed by the exact English string, plus a few regex
-patterns for strings with numbers in them. Missing strings fall back to
-English. To list what a dictionary is missing, run
-`npx electron test/ui/i18n-collect.js fr` (or `zh`, `ar`): it walks through
-every view with demo data and writes the untranslated strings to a file.
-Adding a language also means adding it to `UI_LANGS` in `index.html`, to
-`LANGS` in `taste.js`, and labels/seed words for it in `topics.json`.
+The interface is written in English. Every other language is one file,
+`<code>.json`, keyed by the exact English string, plus a few regex patterns for
+strings with numbers in them. Missing strings fall back to English. Ember picks
+up every file it finds, so **adding a language is adding a file**: nothing in
+the code lists them.
+
+**Without rebuilding Ember.** Download one of the shipped files from
+[`desktop/src/i18n/`](src/i18n) (say `fr.json`), save it in the `i18n` folder of
+Ember's data folder under your language's code (`es.json`, `pt-br.json`…), set
+`language` and `label` in its `_meta` (below) to yours, translate the values, and restart
+Ember: the language appears in the pickers. The folder is shown in SETUP ›
+LANGUAGE; it is usually `%APPDATA%\Ember\ember-data\i18n` on Windows,
+`~/.config/Ember/ember-data/i18n` on Linux, and `~/.ember/ember-data/i18n` (or
+`<--data folder>/ember-data/i18n`) for `npm run serve`. A file there with the
+same code as a shipped one replaces it, so you can also fix a translation in
+place.
+
+**For everyone.** Put the file in `src/i18n/` and open a pull request.
+
+The `_meta` block at the top of a file describes the language (all optional):
+
+| key | meaning |
+|---|---|
+| `language` | its own name, shown on the first-run picker (`"Русский"`) |
+| `label` | the button text (`"РУССКИЙ"`; default: `language` in capitals) |
+| `dir` | `"rtl"` for right-to-left scripts (default `"ltr"`) |
+| `script` | `latin`, `cyrillic`, `zh` or `ar`, used by ONLY POSTS I CAN READ (default `latin`) |
+
+Topic names in a language with no labels in `topics.json` can be translated
+like any other string (`"Music": "Música"`). For Discover to also *recognise*
+posts written in a new language, add its labels and seed words to `topics.json`
+and its code to `LANGS` in `taste.js`.
+
+To list what a dictionary is missing, run
+`npx electron test/ui/i18n-collect.js fr` (or any shipped code, or
+`--file <path to your .json>`): it walks through every view with demo data and
+writes the untranslated strings to a file. `node test/languages.test.js` checks
+that every shipped translation covers the same strings and patterns.
 
 ## Storage model
 Followers re-seed a sliding tail window (default 150 blocks) of each feed;

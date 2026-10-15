@@ -1,7 +1,10 @@
 {
  "_meta": {
   "language": "简体中文",
-  "note": "Keys are the exact English interface strings (whitespace folded). Patterns are regular expressions over the English string; $1.. are its groups. Missing keys fall back to English. List what is missing with: npx electron test/ui/i18n-collect.js zh"
+  "label": "中文",
+  "dir": "ltr",
+  "script": "zh",
+  "note": "Keys are the exact English interface strings (whitespace folded). Patterns are regular expressions over the English string; $1.. are its groups. Missing keys fall back to English. To add a language, copy this file to <code>.json (e.g. es.json) in src/i18n/, or in the i18n folder shown in SETUP › LANGUAGE, and restart Ember. _meta: language = its own name, label = the button text, dir = ltr or rtl, script = latin, cyrillic, zh or ar (for ONLY POSTS I CAN READ). List what is missing with: npx electron test/ui/i18n-collect.js zh"
  },
  "strings": {
   "SERVERLESS · YOUR PEOPLE, NOT AN AUDIENCE": "无服务器 · 你的人，而不是观众",
@@ -235,10 +238,12 @@
   "LANGUAGE": "语言",
   "INTERFACE": "界面",
   "the language Ember speaks to you in. posts stay in the language they were written in.": "Ember 和你说话所用的语言。帖子保持原来的语言。",
+  "ADD A LANGUAGE": "添加语言",
+  "copy a translation file (for example fr.json, renamed to your language's code) into this folder on the computer running Ember, translate it, then restart Ember. Anything left out stays in English.": "把一个翻译文件（例如 fr.json，改名为你的语言代码）复制到运行 Ember 的电脑上的这个文件夹里，翻译它，然后重启 Ember。没翻译的部分保持英文。",
   "LANGUAGES I READ": "我能读的语言",
   "used to tune Discover and to read your topics' seed words in the right languages": "用于调整「发现」，并以合适的语言读取你话题的种子词",
   "ONLY POSTS I CAN READ": "只看我能读的帖子",
-  "hide Discover posts written in a script you don't read (Latin, Chinese, Arabic)": "在「发现」中隐藏你读不懂的文字（拉丁、中文、阿拉伯）所写的帖子",
+  "hide Discover posts written in a script you don't read (Latin, Cyrillic, Chinese, Arabic)": "在发现中隐藏用你不会读的文字写的帖子（拉丁文、西里尔文、中文、阿拉伯文）",
   "WHAT YOU'RE INTO": "你的兴趣",
   "TOPICS": "话题",
   "each topic is a room on the network: you sit in it, posts about it reach you. Ember also sits in two random decoy rooms, so nobody watching can tell which ones are really yours.": "每个话题都是网络上的一个房间：你坐在里面，相关帖子会送到你这里。Ember 还会随机进入两个诱饵房间，旁观者分不清哪些才是你真正的兴趣。",

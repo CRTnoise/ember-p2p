@@ -167,7 +167,10 @@
     { id: 'code', label: { en: 'Code', fr: 'Code', zh: '编程', ar: 'برمجة' } },
     { id: 'privacy', label: { en: 'Privacy', fr: 'Vie privée', zh: '隐私', ar: 'الخصوصية' } }
   ]
-  let taste = { catalog, langs: ['en', 'fr', 'zh', 'ar'], topics: ['art', 'pixel'], topicText: 'risograph zines', dial: 1, onlyMyLangs: false, uiLang: 'en', readLangs: ['en', 'fr'],
+  const L = (code, name, label, dir, words) => ({ code, name, label, dir, script: 'latin', words })
+  const uiLangs = [L('en', 'English', 'ENGLISH', 'ltr', {}), L('ar', 'العربية', 'العربية', 'rtl', { LANGUAGE: 'اللغة' }), L('fr', 'Français', 'FRANÇAIS', 'ltr', { LANGUAGE: 'LANGUE', 'I ALSO READ': 'JE LIS AUSSI', 'CONTINUE →': 'CONTINUER →' }),
+    L('ru', 'Русский', 'РУССКИЙ', 'ltr', { LANGUAGE: 'ЯЗЫК', 'I ALSO READ': 'Я ТАКЖЕ ЧИТАЮ', 'CONTINUE →': 'ДАЛЕЕ →' }), L('zh', '简体中文', '中文', 'ltr', { LANGUAGE: '语言' })]
+  let taste = { catalog, langs: ['en', 'fr', 'zh', 'ar', 'ru'], uiLangs, i18nDir: '/home/demo/.config/Ember/ember-data/i18n', topics: ['art', 'pixel'], topicText: 'risograph zines', dial: 1, onlyMyLangs: false, uiLang: 'en', readLangs: ['en', 'fr'],
     onboarded: Q.get('onboarded') !== '0', campfires: true, terms: [{ term: 'riso', w: 2.1 }, { term: 'zine', w: 1.6 }, { term: 'linocut', w: 0.9 }], avoid: [{ term: 'crypto', w: -0.8 }], suggest: [] }
   let mod = { publishBlocklist: false, circleSignals: true, subs: [{ key: K('c1'), name: 'tovar-lists', count: 37, ts: now - d }], blocked: 0, listHidden: 37, circleHidden: 2, circleSoft: 5 }
   const fireMsgs = [

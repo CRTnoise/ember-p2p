@@ -39,6 +39,14 @@ ok(taste.readable('今天天气很好', ['en', 'fr']) === false, 'zh readable wi
 ok(taste.readable('今天天气很好', ['zh']) === true, 'zh unreadable with zh')
 ok(taste.readable('hello there', ['fr']) === true, 'latin unreadable for a French reader')
 ok(taste.readable('🔥🔥🔥', ['ar']) === true, 'emoji-only post hidden')
+ok(taste.scriptOf('привет всем, как дела') === 'cyrillic', 'cyrillic script')
+ok(taste.readable('привет всем, как дела', ['en', 'fr']) === false, 'cyrillic readable without ru')
+ok(taste.readable('привет всем, как дела', ['ru']) === true, 'cyrillic unreadable with ru')
+ok(taste.readable('hello there', ['ru']) === false, 'latin readable for a Russian-only reader')
+ok(taste.readable('hola a todos', ['es']) === true, 'a language with no known script is not treated as latin')
+ok(taste.readable('привет всем', ['uk'], { uk: 'cyrillic' }) === true, 'a script given by a translation file is ignored')
+ok(taste.classify('Слушаю новый альбом, гитара звучит отлично').includes('music'), 'Russian music post missed')
+ok(taste.classify('Пишу компилятор, нашёл странный баг').includes('code'), 'Russian code post missed')
 
 // ---- compass: learn, forget, fade, persist ----
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ember-taste-'))

@@ -30,6 +30,7 @@ const dm = require('./dm')
 const P = require('./protocol')
 const { Nearby, searchPlaces, locateTown } = require('./nearby')
 const taste = require('./taste')
+const languages = require('./languages')
 const { Fires } = require('./fires')
 const sodium = require('sodium-universal')
 
@@ -114,6 +115,22 @@ let engineUp = false           // recent embeddings of what I write/read (drives
 const hex = (buf) => b4a.toString(buf, 'hex')
 const postId = (a, s) => `${a}:${s}`
 
+// ---------- interface languages ----------
+// English is the source text; every other language is one <code>.json, shipped
+// in src/i18n/ or dropped into <data>/i18n/ (see languages.js). Read at start.
+let LANGS_CACHE = null
+function userI18nDir () { return dataDir ? path.join(dataDir, 'i18n') : null }
+function uiLangList () {
+  if (LANGS_CACHE) return LANGS_CACHE
+  const list = languages.load([path.join(__dirname, 'i18n'), userI18nDir()])
+  if (dataDir) { LANGS_CACHE = list; try { fs.mkdirSync(userI18nDir(), { recursive: true }) } catch {} }
+  return list
+}
+function langInfo (code) { return typeof code === 'string' ? uiLangList().find(l => l.code === code) || null : null }
+// what the page needs to draw the pickers (no file paths)
+function uiLangs () { return uiLangList().map(({ file, ...l }) => l) }
+function langScripts () { return Object.fromEntries(uiLangList().map(l => [l.code, l.script])) }
+
 // ---------- persistence for discovered content ----------
 
 function settingsPath () { return path.join(dataDir, 'settings.json') }
@@ -131,7 +148,7 @@ function loadSettings () {
   if (!Array.isArray(SETTINGS.modSubs)) SETTINGS.modSubs = []
   SETTINGS.modSubs = SETTINGS.modSubs.filter(x => x && P.HEX64.test(x.key || '')).slice(0, 20)
   if (!Number.isInteger(SETTINGS.dial) || SETTINGS.dial < 0 || SETTINGS.dial > 3) SETTINGS.dial = 1
-  if (!taste.LANGS.includes(SETTINGS.uiLang)) SETTINGS.uiLang = null
+  if (!langInfo(SETTINGS.uiLang)) SETTINGS.uiLang = null
   if (SETTINGS.readLangs !== null && !Array.isArray(SETTINGS.readLangs)) SETTINGS.readLangs = null
   if (typeof SETTINGS.topicText !== 'string') SETTINGS.topicText = ''
   const w = SETTINGS.web && typeof SETTINGS.web === 'object' ? SETTINGS.web : {}
@@ -478,7 +495,7 @@ function setCommons (on) {
 }
 function readLangs () {
   const l = Array.isArray(SETTINGS.readLangs) && SETTINGS.readLangs.length ? SETTINGS.readLangs : [SETTINGS.uiLang || 'en']
-  const ok = l.filter(x => taste.LANGS.includes(x))
+  const ok = l.filter(x => langInfo(x))
   return ok.length ? ok : ['en']
 }
 function compassVec () { return tasteStore ? tasteStore.vector(SETTINGS.topics, readLangs(), SETTINGS.topicText) : null }
@@ -939,7 +956,7 @@ handle('discover', async (_e, { query } = {}) => {
   // If a query is given, rank the gossip cache by cosine proximity; else by the compass.
   const me = hex(myCore.key)
   let list = [...discovered.values()].filter(a => a.author !== me && !isHidden(a.author) && !notInterested.has(postId(a.author, a.seq)))
-  if (SETTINGS.onlyMyLangs) { const langs = readLangs(); list = list.filter(a => taste.readable(a.text, langs)) }
+  if (SETTINGS.onlyMyLangs) { const langs = readLangs(); list = list.filter(a => taste.readable(a.text, langs, langScripts())) }
   const total = list.length
   if (query && query.trim()) {
     const qv = disc.embed(query)
@@ -1432,7 +1449,7 @@ handle('near-search', async (_e, { q }) => searchPlaces(typeof q === 'string' ? 
 function tasteState () {
   return {
     catalog: taste.CATALOG.map(t => ({ id: t.id, label: t.label })),
-    langs: taste.LANGS,
+    langs: taste.LANGS, uiLangs: uiLangs(), i18nDir: userI18nDir(),
     topics: SETTINGS.topics, topicText: SETTINGS.topicText, dial: SETTINGS.dial,
     onlyMyLangs: SETTINGS.onlyMyLangs === true, uiLang: SETTINGS.uiLang, readLangs: readLangs(),
     onboarded: SETTINGS.onboarded === true, campfires: SETTINGS.campfires !== false,
@@ -1447,8 +1464,8 @@ handle('taste-set', async (_e, patch = {}) => {
   if (typeof patch.topicText === 'string') SETTINGS.topicText = patch.topicText.slice(0, 280)
   if (Number.isInteger(patch.dial) && patch.dial >= 0 && patch.dial <= 3) SETTINGS.dial = patch.dial
   if (typeof patch.onlyMyLangs === 'boolean') SETTINGS.onlyMyLangs = patch.onlyMyLangs
-  if (taste.LANGS.includes(patch.uiLang)) SETTINGS.uiLang = patch.uiLang
-  if (Array.isArray(patch.readLangs)) { const l = [...new Set(patch.readLangs.filter(x => taste.LANGS.includes(x)))]; SETTINGS.readLangs = l.length ? l : null }
+  if (langInfo(patch.uiLang)) SETTINGS.uiLang = patch.uiLang
+  if (Array.isArray(patch.readLangs)) { const l = [...new Set(patch.readLangs.filter(x => langInfo(x)))]; SETTINGS.readLangs = l.length ? l : null }
   if (typeof patch.onboarded === 'boolean') SETTINGS.onboarded = patch.onboarded
   if (typeof patch.campfires === 'boolean') SETTINGS.campfires = patch.campfires
   saveSettings()
@@ -1465,11 +1482,7 @@ handle('not-interested', async (_e, { author, seq } = {}) => {
   if (a) learn(a.text, -1.0)
   return true
 })
-// interface translations: src/i18n/{fr,zh,ar}.json (English is the source text)
-handle('i18n', async (_e, { lang } = {}) => {
-  if (!['fr', 'zh', 'ar'].includes(lang)) return null
-  try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'i18n', lang + '.json'), 'utf8')) } catch { return null }
-})
+handle('i18n', async (_e, { lang } = {}) => { const l = langInfo(lang); return l && l.file ? languages.readDict(l.file) : null })
 
 // ---- circle moderation (v2.8) ----
 // Blocking stays personal. Optionally you PUBLISH your blocklist (a signed

@@ -1,14 +1,17 @@
 // Lists every interface string the translation dictionaries don't cover yet.
 // Loads the real page with the demo engine, walks through every view, and
 // records each English string that src/i18n/<lang>.json can't translate.
-// Run from desktop/:  npx electron test/ui/i18n-collect.js [fr|zh|ar|empty]   (default: fr)
+// Run from desktop/:  npx electron test/ui/i18n-collect.js [fr|zh|ar|ru|<code>|empty]   (default: fr)
+// A <code> found only in the data folder's i18n/ can be checked with --file <path>.
 // Writes the list to <tmp>/ember-i18n-missing-<lang>.json
 const { app, BrowserWindow } = require('electron')
 const fs = require('fs'); const path = require('path'); const os = require('os')
 app.on('window-all-closed', () => {})
 const NL = String.fromCharCode(10)
-const lang = process.argv.find(a => /^(fr|zh|ar|empty)$/.test(a)) || 'fr'
-const dict = lang === 'empty' ? { strings: {}, patterns: [] } : JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'i18n', lang + '.json'), 'utf8'))
+const fileArg = process.argv.indexOf('--file')
+const dictFile = fileArg > 0 ? process.argv[fileArg + 1] : null
+const lang = dictFile ? path.basename(dictFile, '.json') : process.argv.slice(2).find(a => /^(?:[a-z]{2,3}(?:-[a-z0-9]{2,8})?|empty)$/.test(a)) || 'fr'
+const dict = lang === 'empty' ? { strings: {}, patterns: [] } : JSON.parse(fs.readFileSync(dictFile || path.join(__dirname, '..', '..', 'src', 'i18n', lang + '.json'), 'utf8'))
 
 const html = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'index.html'), 'utf8')
 const demo = fs.readFileSync(path.join(__dirname, 'fixtures.js'), 'utf8')
